@@ -8,7 +8,8 @@ const features = [
   {
     icon: Users,
     title: "Smart Matching",
-    description: "AI-powered teammate recommendations based on skills and vibe.",
+    description:
+      "AI-powered teammate recommendations based on skills and vibe.",
   },
   {
     icon: Zap,
@@ -60,8 +61,8 @@ const Landing = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-12"
           >
-            Find your perfect hackathon teammate based on skills, vibe, and equity.
-            Build winning projects together.
+            Find your perfect hackathon teammate based on skills, vibe, and
+            equity. Build winning projects together.
           </motion.p>
 
           <motion.div
@@ -97,7 +98,9 @@ const Landing = () => {
                 <div className="text-3xl md:text-4xl font-bold text-foreground">
                   {stat.value}
                 </div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
+                <div className="text-sm text-muted-foreground">
+                  {stat.label}
+                </div>
               </div>
             ))}
           </motion.div>
@@ -118,7 +121,8 @@ const Landing = () => {
               Built for Winners
             </h2>
             <p className="text-muted-foreground max-w-lg mx-auto">
-              Everything you need to find the perfect team and build something amazing.
+              Everything you need to find the perfect team and build something
+              amazing.
             </p>
           </motion.div>
 
@@ -155,7 +159,7 @@ const Landing = () => {
             viewport={{ once: true }}
             className="glass rounded-3xl p-12 md:p-16 text-center border relative overflow-hidden"
           >
-            <div 
+            <div
               className="absolute inset-0 opacity-50"
               style={{ background: "var(--gradient-glow)" }}
             />
@@ -164,7 +168,8 @@ const Landing = () => {
                 Ready to Find Your Squad?
               </h2>
               <p className="text-muted-foreground max-w-lg mx-auto mb-8">
-                Join thousands of hackers already building winning teams on Merge.
+                Join thousands of hackers already building winning teams on
+                Merge.
               </p>
               <Link to="/onboarding">
                 <motion.button

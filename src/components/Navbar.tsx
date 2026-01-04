@@ -21,7 +21,7 @@ export const Navbar = ({ showProfile = false }: NavbarProps) => {
             <Sparkles className="w-5 h-5 text-primary-foreground" />
           </div>
           <span className="text-xl font-bold tracking-tight text-foreground">
-            Merge
+            GitTogether
           </span>
         </Link>
 
