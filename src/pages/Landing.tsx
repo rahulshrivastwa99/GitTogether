@@ -70,7 +70,8 @@ const Landing = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            <Link to="/onboarding">
+            {/* UPDATED LINK: Points to the new Auth Page */}
+            <Link to="/auth">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -169,9 +170,10 @@ const Landing = () => {
               </h2>
               <p className="text-muted-foreground max-w-lg mx-auto mb-8">
                 Join thousands of hackers already building winning teams on
-                Merge.
+                GitTogether.
               </p>
-              <Link to="/onboarding">
+              {/* UPDATED LINK: Points to the new Auth Page */}
+              <Link to="/auth">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -192,10 +194,11 @@ const Landing = () => {
             <div className="w-6 h-6 rounded-lg gradient-primary flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-bold text-foreground">Merge</span>
+            {/* UPDATED NAME */}
+            <span className="font-bold text-foreground">GitTogether</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            © 2024 Merge. All rights reserved.
+            © 2024 GitTogether. All rights reserved.
           </p>
         </div>
       </footer>
