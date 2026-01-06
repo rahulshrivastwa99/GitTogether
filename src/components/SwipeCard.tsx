@@ -1,6 +1,4 @@
 import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
-import { useState } from "react";
-import { TechTag } from "./TechTag";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +18,7 @@ export interface UserProfile {
   role: string;
   bio: string;
   techStack: string[];
-  achievements: string[]; // Added this line
+  achievements: string[];
   avatarGradient: string;
 }
 
@@ -28,12 +26,35 @@ interface SwipeCardProps {
   user: UserProfile;
   onSwipe: (direction: "left" | "right") => void;
   isTop?: boolean;
+  exitDirection?: "left" | "right";
 }
 
-export const SwipeCard = ({ user, onSwipe, isTop = false }: SwipeCardProps) => {
-  const [exitX, setExitX] = useState(0);
+// ANIMATION VARIANTS
+const cardVariants = {
+  hidden: { scale: 0.95, opacity: 0 },
+  visible: {
+    scale: 1,
+    opacity: 1,
+    x: 0,
+    rotate: 0,
+    transition: { duration: 0.3 },
+  },
+  exit: (direction: "left" | "right") => ({
+    x: direction === "right" ? 1000 : -1000,
+    rotate: direction === "right" ? 20 : -20,
+    opacity: 0,
+    transition: { duration: 0.4, ease: "easeInOut" }, // Slower, smoother exit
+  }),
+};
+
+export const SwipeCard = ({
+  user,
+  onSwipe,
+  isTop = false,
+  exitDirection,
+}: SwipeCardProps) => {
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-300, 0, 300], [-20, 0, 20]);
+  const rotate = useTransform(x, [-300, 0, 300], [-15, 0, 15]);
   const opacity = useTransform(
     x,
     [-300, -100, 0, 100, 300],
@@ -43,91 +64,78 @@ export const SwipeCard = ({ user, onSwipe, isTop = false }: SwipeCardProps) => {
   const passOpacity = useTransform(x, [-150, 0], [1, 0]);
   const connectOpacity = useTransform(x, [0, 150], [0, 1]);
 
-  const handleDragEnd = (
-    _: MouseEvent | TouchEvent | PointerEvent,
-    info: PanInfo
-  ) => {
-    if (info.offset.x > 150) {
-      setExitX(1000);
-      setTimeout(() => onSwipe("right"), 10);
-    } else if (info.offset.x < -150) {
-      setExitX(-1000);
-      setTimeout(() => onSwipe("left"), 10);
+  const handleDragEnd = (_: any, info: PanInfo) => {
+    const threshold = 100;
+    if (info.offset.x > threshold) {
+      onSwipe("right");
+    } else if (info.offset.x < -threshold) {
+      onSwipe("left");
     }
   };
 
   return (
     <motion.div
-      className="absolute w-full max-w-sm cursor-grab active:cursor-grabbing"
-      style={{ x, rotate, opacity }}
+      className="absolute w-full h-full cursor-grab active:cursor-grabbing"
+      style={{
+        x: isTop ? x : 0,
+        rotate: isTop ? rotate : 0,
+        opacity,
+        zIndex: isTop ? 10 : 5,
+      }}
       drag={isTop ? "x" : false}
       dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.9}
+      dragElastic={0.7}
       onDragEnd={handleDragEnd}
-      initial={{ scale: isTop ? 1 : 0.95, y: isTop ? 0 : 20 }}
-      animate={{ scale: isTop ? 1 : 0.95, y: isTop ? 0 : 20 }}
-      exit={{ x: exitX, opacity: 0, transition: { duration: 0.3 } }}
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      custom={exitDirection} // Passes direction to 'exit' variant
     >
       {/* Swipe Indicators */}
       {isTop && (
         <>
           <motion.div
             style={{ opacity: passOpacity }}
-            className="absolute -top-4 -left-4 z-10 px-4 py-2 rounded-lg border-2 border-destructive text-destructive font-bold text-lg rotate-[-15deg] bg-background/80 backdrop-blur-sm"
+            className="absolute top-8 right-8 z-10 px-4 py-2 rounded-lg border-4 border-destructive text-destructive font-black text-2xl rotate-[15deg] bg-background/80 backdrop-blur-sm pointer-events-none"
           >
-            PASS
+            NOPE
           </motion.div>
           <motion.div
             style={{ opacity: connectOpacity }}
-            className="absolute -top-4 -right-4 z-10 px-4 py-2 rounded-lg border-2 border-success text-success font-bold text-lg rotate-[15deg] bg-background/80 backdrop-blur-sm"
+            className="absolute top-8 left-8 z-10 px-4 py-2 rounded-lg border-4 border-success text-success font-black text-2xl rotate-[-15deg] bg-background/80 backdrop-blur-sm pointer-events-none"
           >
-            CONNECT
+            LIKE
           </motion.div>
         </>
       )}
 
+      {/* Card Content */}
       <div
         className={cn(
-          "glass rounded-3xl overflow-hidden border border-white/10 shadow-xl bg-card",
+          "glass rounded-3xl overflow-hidden border border-white/10 shadow-xl bg-card h-full flex flex-col",
           isTop ? "shadow-[0_0_30px_-5px_rgba(var(--primary),0.3)]" : ""
         )}
       >
         <div
-          className="h-48 relative"
+          className="h-[45%] relative flex-shrink-0"
           style={{ background: user.avatarGradient }}
         >
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-6xl drop-shadow-md animate-in zoom-in duration-300">
+            <span className="text-8xl drop-shadow-md animate-in zoom-in duration-300">
               👤
             </span>
           </div>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-5 space-y-3 flex flex-col flex-1">
           <Dialog>
             <DialogTrigger asChild>
               <div className="cursor-pointer hover:opacity-80 transition-opacity group">
                 <h2 className="text-2xl font-bold text-foreground flex items-center gap-2 group-hover:text-primary transition-colors">
                   {user.name}
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="lucide lucide-maximize-2 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground"
-                  >
-                    <polyline points="15 3 21 3 21 9" />
-                    <polyline points="9 21 3 21 3 15" />
-                    <line x1="21" x2="14" y1="3" y2="10" />
-                    <line x1="3" x2="10" y1="21" y2="14" />
-                  </svg>
                 </h2>
-                <p className="text-primary font-medium">{user.role}</p>
+                <p className="text-primary font-medium text-sm">{user.role}</p>
               </div>
             </DialogTrigger>
 
@@ -155,7 +163,6 @@ export const SwipeCard = ({ user, onSwipe, isTop = false }: SwipeCardProps) => {
                   <h3 className="text-xl font-semibold mb-3 flex items-center gap-2">
                     🏆 Achievements
                   </h3>
-                  {/* NOW DYNAMIC: Reads from user.achievements */}
                   <ul className="list-disc list-inside text-base text-muted-foreground space-y-2 ml-2">
                     {user.achievements.map((ach, index) => (
                       <li key={index}>{ach}</li>
@@ -183,17 +190,23 @@ export const SwipeCard = ({ user, onSwipe, isTop = false }: SwipeCardProps) => {
             </DialogContent>
           </Dialog>
 
-          <p className="text-muted-foreground text-sm leading-relaxed line-clamp-2">
+          <p className="text-muted-foreground text-sm leading-relaxed line-clamp-3 flex-1">
             {user.bio}
           </p>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 mt-auto">
             {user.techStack.slice(0, 3).map((tech) => (
-              <TechTag key={tech} label={tech} size="sm" />
+              <Badge
+                key={tech}
+                variant="secondary"
+                className="text-[10px] px-2 py-0.5 bg-secondary/50 hover:bg-secondary/70 transition-colors"
+              >
+                {tech}
+              </Badge>
             ))}
             {user.techStack.length > 3 && (
-              <span className="text-xs text-muted-foreground flex items-center">
-                +{user.techStack.length - 3} more
+              <span className="text-[10px] text-muted-foreground flex items-center">
+                +{user.techStack.length - 3}
               </span>
             )}
           </div>
