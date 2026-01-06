@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Sparkles,
-  GraduationCap,
+  Mail, // Changed from GraduationCap
   ArrowRight,
   Loader2,
   AlertCircle,
@@ -17,8 +17,10 @@ export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Changed 'email' to 'identifier' to allow phone numbers too
   const [formData, setFormData] = useState({
-    email: "",
+    identifier: "",
     password: "",
     name: "",
   });
@@ -33,9 +35,11 @@ export default function AuthPage() {
 
     // 1. SIMULATE NETWORK DELAY
     setTimeout(() => {
-      // 2. VALIDATION LOGIC
-      if (!formData.email.endsWith(".edu")) {
-        setError("Access restricted. Please use a valid .edu college email.");
+      // 2. UPDATED VALIDATION LOGIC (No .edu check)
+
+      // Basic length check for Email or Phone
+      if (formData.identifier.length < 3) {
+        setError("Please enter a valid email or mobile number.");
         setIsLoading(false);
         return;
       }
@@ -47,7 +51,7 @@ export default function AuthPage() {
       }
 
       // 3. SUCCESSFUL LOGIN
-      login(formData.email);
+      login(formData.identifier);
       navigate("/dashboard");
     }, 1500);
   };
@@ -74,7 +78,7 @@ export default function AuthPage() {
           <p className="text-muted-foreground text-sm">
             {isLogin
               ? "Login to find your perfect hackathon team."
-              : "Create an account with your university email."}
+              : "Create an account to get started."}
           </p>
         </div>
 
@@ -97,22 +101,23 @@ export default function AuthPage() {
             </div>
           )}
 
-          {/* Email Field */}
+          {/* Identifier Field (Email or Phone) */}
           <div className="space-y-2">
-            <Label htmlFor="email">College Email</Label>
+            <Label htmlFor="identifier">Email or Mobile Number</Label>
             <div className="relative">
               <Input
-                id="email"
-                type="email"
-                placeholder="student@university.edu"
+                id="identifier"
+                type="text" // Changed from 'email' to 'text' to allow phone numbers
+                placeholder="name@example.com or 9876543210"
                 className="bg-background/50 pl-10"
-                value={formData.email}
+                value={formData.identifier}
                 onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
+                  setFormData({ ...formData, identifier: e.target.value })
                 }
                 required
               />
-              <GraduationCap className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
+              {/* Changed Icon to Mail (Generic) */}
+              <Mail className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
             </div>
           </div>
 
