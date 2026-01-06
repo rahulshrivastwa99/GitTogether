@@ -7,7 +7,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  Lightbulb, // <--- Imported Lightbulb icon
+  Lightbulb,
+  Trophy,
+  CalendarDays, // <--- 1. Import the icon
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
@@ -18,10 +20,12 @@ interface DashboardSidebarProps {
   onSearchClick: () => void;
 }
 
-// Updated navigation items list
+// 2. Add Calendar to the navigation list
 const navItems = [
   { icon: Users, label: "Matches", path: "/dashboard" },
-  { icon: Lightbulb, label: "Idea Spark", path: "/dashboard/ideas" }, // <--- New Item
+  { icon: Trophy, label: "Hackathons", path: "/dashboard/hackathons" },
+  { icon: CalendarDays, label: "Calendar", path: "/dashboard/calendar" }, // <--- New Item
+  { icon: Lightbulb, label: "Idea Spark", path: "/dashboard/ideas" },
   {
     icon: Calculator,
     label: "Equity Calculator",
@@ -35,7 +39,6 @@ export const DashboardSidebar = ({
   onToggle,
   onSearchClick,
 }: DashboardSidebarProps) => {
-  // Shared classes for links and buttons
   const itemClasses = cn(
     "flex items-center gap-3 px-3 py-3 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all group w-full text-left",
     collapsed && "justify-center"
@@ -50,7 +53,6 @@ export const DashboardSidebar = ({
         collapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Logo Section */}
       <div className="h-16 border-b border-border flex items-center justify-between px-4">
         {!collapsed && (
           <div className="flex items-center gap-2">
@@ -74,9 +76,8 @@ export const DashboardSidebar = ({
         </button>
       </div>
 
-      {/* Navigation Links */}
       <nav className="flex-1 p-3 space-y-1">
-        {/* 1. Matches Link */}
+        {/* Matches Button (First Item) */}
         {navItems.slice(0, 1).map((item) => (
           <NavLink
             key={item.path}
@@ -90,13 +91,13 @@ export const DashboardSidebar = ({
           </NavLink>
         ))}
 
-        {/* 2. Search Button */}
+        {/* Search Button (Middle) */}
         <button onClick={onSearchClick} className={itemClasses}>
           <Search className="w-5 h-5 flex-shrink-0 group-hover:text-primary transition-colors" />
           {!collapsed && <span className="font-medium">Search</span>}
         </button>
 
-        {/* 3. Remaining Links (Idea Spark, Calculator, Settings) */}
+        {/* Rest of the Links (Hackathons, Calendar, Idea Spark, etc.) */}
         {navItems.slice(1).map((item) => (
           <NavLink
             key={item.path}

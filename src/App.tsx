@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "@/context/AuthContext"; // Import Auth Context
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 
 // Pages
 import Landing from "./pages/Landing";
@@ -11,9 +11,11 @@ import AuthPage from "./pages/AuthPage";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import EquityCalculator from "./pages/EquityCalculator";
-import IdeaSpark from "./pages/IdeaSpark"; // <--- Import the new page
+import IdeaSpark from "./pages/IdeaSpark";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import HackathonPage from "./pages/HackathonPage";
+import CalendarPage from "./pages/CalendarPage"; // <--- 1. IMPORT THIS
 
 const queryClient = new QueryClient();
 
@@ -50,7 +52,26 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            {/* NEW ROUTE: Idea Spark */}
+
+            {/* NEW ROUTE: Calendar */}
+            <Route
+              path="/dashboard/calendar"
+              element={
+                <ProtectedRoute>
+                  <CalendarPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/dashboard/hackathons"
+              element={
+                <ProtectedRoute>
+                  <HackathonPage />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path="/dashboard/ideas"
               element={
@@ -59,6 +80,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/dashboard/calculator"
               element={
@@ -67,6 +89,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/dashboard/settings"
               element={
