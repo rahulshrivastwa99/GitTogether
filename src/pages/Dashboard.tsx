@@ -3,19 +3,15 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
   MessageCircle,
-  RefreshCw,
   Filter,
   Zap,
   Calendar,
-  TrendingUp,
   Github,
   Loader2,
   Check,
   X,
   MapPin,
   ArrowRight,
-  GraduationCap,
-  Link as LinkIcon,
   PanelRight,
   PanelRightClose,
 } from "lucide-react";
@@ -27,7 +23,6 @@ import { SwipeControls } from "@/components/SwipeControls";
 import { MatchesSidebar } from "@/components/MatchesSidebar";
 import { UserSearch } from "@/components/UserSearch";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -344,8 +339,6 @@ const upcomingHackathons = [
   { name: "ETHGlobal Online", date: "Dec 10", status: "Open" },
 ];
 
-const trendingSkills = ["Rust", "Next.js 15", "Solidity", "GenAI"];
-
 const Dashboard = () => {
   const { userEmail } = useAuth();
   const navigate = useNavigate();
@@ -355,12 +348,12 @@ const Dashboard = () => {
   const [matchesSidebarOpen, setMatchesSidebarOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchOpen, setSearchOpen] = useState(false);
-
-  // --- SLIDING WIDGET PANEL STATE ---
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
-
   const [isCampusFilterActive, setIsCampusFilterActive] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+
+  // Animation State
+  const [exitDirection, setExitDirection] = useState<"left" | "right">("right");
 
   // Github State
   const [showGithubModal, setShowGithubModal] = useState(false);
@@ -368,22 +361,26 @@ const Dashboard = () => {
   const [githubStatus, setGithubStatus] = useState<
     "idle" | "loading" | "connected"
   >("idle");
+  const [userAvatar, setUserAvatar] = useState("");
 
   const [users, setUsers] = useState<UserProfile[]>(mockUsers);
   const [matches] = useState(mockMatches);
 
-  // Profile Data Helper
+  useEffect(() => {
+    const savedAvatar = localStorage.getItem("userAvatar");
+    if (savedAvatar) setUserAvatar(savedAvatar);
+  }, []);
+
   const myProfile = {
     name: userEmail ? userEmail.split("@")[0] : "Madhav Kalra",
     email: userEmail || "guest@example.com",
     role: "Full Stack Developer",
     college: "BPIT, GGSIPU",
-    bio: "Passionate about building cool stuff. Looking for a hackathon team.",
+    bio: "Passionate about building cool stuff.",
     techStack: ["React", "JavaScript", "Python"],
     stats: { swipes: 42, matches: 2, karma: 950 },
   };
 
-  // --- FILTER LOGIC ---
   useEffect(() => {
     let filtered = mockUsers;
     if (activeFilter !== "All") {
@@ -403,9 +400,15 @@ const Dashboard = () => {
     setUsers(filtered);
   }, [activeFilter, isCampusFilterActive]);
 
-  // Handlers
+  // --- UPDATED SWIPE HANDLER WITH DELAY ---
   const handleSwipe = (direction: "left" | "right") => {
-    if (users.length > 0) setUsers((prev) => prev.slice(1));
+    setExitDirection(direction); // 1. Update state first
+
+    // 2. Wait 200ms for state to propagate before unmounting card
+    // This allows the card to read the NEW exitDirection value
+    setTimeout(() => {
+      if (users.length > 0) setUsers((prev) => prev.slice(1));
+    }, 200);
   };
 
   const handleSelectUser = (userId: string) => {
@@ -435,10 +438,8 @@ const Dashboard = () => {
     }, 1500);
   };
 
-  // --- REUSABLE SIDEBAR CONTENT ---
   const SidebarContent = () => (
     <>
-      {/* Profile Card */}
       <Card
         className="p-4 border-border/50 bg-card/50 hover:bg-card/80 transition-colors cursor-pointer group mb-6"
         onClick={() => setShowProfileModal(true)}
@@ -447,7 +448,11 @@ const Dashboard = () => {
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10 border-2 border-primary/20">
               <AvatarImage
-                src={`https://api.dicebear.com/7.x/initials/svg?seed=${myProfile.name}`}
+                src={
+                  userAvatar ||
+                  `https://api.dicebear.com/7.x/initials/svg?seed=${myProfile.name}`
+                }
+                className="object-cover"
               />
               <AvatarFallback>{myProfile.name[0]}</AvatarFallback>
             </Avatar>
@@ -488,7 +493,6 @@ const Dashboard = () => {
         </div>
       </Card>
 
-      {/* Hackathons */}
       <div className="mb-6">
         <div
           onClick={() => navigate("/dashboard/hackathons")}
@@ -521,7 +525,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* GitHub Connect */}
       <div className="mt-auto p-4 rounded-xl bg-gradient-to-br from-purple-900/50 to-blue-900/50 border border-purple-500/20">
         <div className="flex items-start gap-3">
           <div className="p-2 rounded-lg bg-purple-500/20 text-purple-300">
@@ -537,11 +540,7 @@ const Dashboard = () => {
             <Button
               size="sm"
               variant="secondary"
-              className={`w-full h-8 text-xs border-none transition-all ${
-                githubStatus === "connected"
-                  ? "bg-green-500/20 text-green-300 hover:bg-green-500/30"
-                  : "bg-purple-500/20 text-purple-200 hover:bg-purple-500/30"
-              }`}
+              className="w-full h-8 text-xs border-none"
               onClick={() => {
                 if (githubStatus !== "connected") setShowGithubModal(true);
               }}
@@ -566,17 +565,14 @@ const Dashboard = () => {
 
   return (
     <div className="flex h-screen w-full bg-background text-foreground font-sans overflow-hidden">
-      {/* 1. LEFT SIDEBAR */}
       <DashboardSidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         onSearchClick={() => setSearchOpen(true)}
       />
 
-      {/* 2. MAIN AREA */}
       <main className="flex-1 flex overflow-hidden relative">
         <div className="flex-1 flex flex-col h-full relative">
-          {/* HEADER */}
           <div className="flex-shrink-0 p-6 z-10">
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
               <div>
@@ -589,7 +585,6 @@ const Dashboard = () => {
                 </p>
               </div>
 
-              {/* ACTION BUTTONS */}
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsCampusFilterActive(!isCampusFilterActive)}
@@ -604,7 +599,6 @@ const Dashboard = () => {
                     {isCampusFilterActive ? "My Campus" : "All Locations"}
                   </span>
                 </button>
-
                 <button
                   onClick={() => setMatchesSidebarOpen(true)}
                   className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all border bg-background border-border relative"
@@ -615,7 +609,6 @@ const Dashboard = () => {
                     <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-primary rounded-full border-2 border-background" />
                   )}
                 </button>
-
                 <button
                   onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
                   className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-all border ${
@@ -634,7 +627,6 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* FILTER PILLS */}
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               <Button
                 variant="outline"
@@ -659,7 +651,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* SWIPE DECK */}
           <div className="flex-1 flex flex-col items-center justify-center relative p-4 min-h-0">
             <UserSearch
               open={searchOpen}
@@ -672,11 +663,10 @@ const Dashboard = () => {
             </div>
 
             {users.length > 0 ? (
-              <div className="flex flex-col items-center w-full max-w-md h-full z-20">
-                {/* --- 1. CARD CONTAINER (TOP) --- */}
-                {/* Fixed height 600px + Bigger width (max-w-md) = Big Rectangle */}
-                <div className="relative w-full h-[600px] mb-8">
-                  <AnimatePresence mode="popLayout">
+              <div className="flex flex-col items-center w-full max-w-[340px] h-full z-20">
+                {/* CARD CONTAINER */}
+                <div className="relative w-full h-[500px] mb-6">
+                  <AnimatePresence mode="popLayout" custom={exitDirection}>
                     {users
                       .slice(0, 3)
                       .map((user, index) => (
@@ -685,13 +675,14 @@ const Dashboard = () => {
                           user={user}
                           onSwipe={handleSwipe}
                           isTop={index === 0}
+                          exitDirection={exitDirection} // Pass direction prop
                         />
                       ))
                       .reverse()}
                   </AnimatePresence>
                 </div>
 
-                {/* --- 2. CONTROLS CONTAINER (BOTTOM - OUTSIDE CARD) --- */}
+                {/* CONTROLS */}
                 <div className="flex-shrink-0">
                   <SwipeControls
                     onPass={() => handleSwipe("left")}
@@ -710,11 +701,9 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* --- SLIDING RIGHT SIDEBAR --- */}
         <AnimatePresence>
           {rightSidebarOpen && (
             <>
-              {/* Backdrop */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -722,7 +711,6 @@ const Dashboard = () => {
                 onClick={() => setRightSidebarOpen(false)}
                 className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
               />
-              {/* Sliding Panel - RESIZED TO w-[400px] */}
               <motion.aside
                 initial={{ x: "100%" }}
                 animate={{ x: 0 }}
@@ -754,7 +742,7 @@ const Dashboard = () => {
         icebreaker="Ask about their favorite tech stack!"
       />
 
-      {/* --- MY PROFILE MODAL --- */}
+      {/* Modals remain the same... */}
       <AnimatePresence>
         {showProfileModal && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -776,11 +764,23 @@ const Dashboard = () => {
                 <div className="relative -mt-12 mb-4 flex justify-between items-end">
                   <Avatar className="h-24 w-24 border-4 border-background bg-card">
                     <AvatarImage
-                      src={`https://api.dicebear.com/7.x/initials/svg?seed=${myProfile.name}`}
+                      src={
+                        userAvatar ||
+                        `https://api.dicebear.com/7.x/initials/svg?seed=${myProfile.name}`
+                      }
+                      className="object-cover"
                     />
                     <AvatarFallback>{myProfile.name[0]}</AvatarFallback>
                   </Avatar>
-                  <Button variant="outline" size="sm" className="rounded-full">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => {
+                      setShowProfileModal(false);
+                      navigate("/dashboard/settings");
+                    }}
+                  >
                     Edit
                   </Button>
                 </div>
@@ -798,7 +798,6 @@ const Dashboard = () => {
         )}
       </AnimatePresence>
 
-      {/* --- GITHUB MODAL --- */}
       <AnimatePresence>
         {showGithubModal && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">

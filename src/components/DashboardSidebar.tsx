@@ -3,15 +3,14 @@ import {
   Users,
   Calculator,
   Settings,
-  Sparkles,
   ChevronLeft,
   ChevronRight,
   Search,
   Lightbulb,
   Trophy,
-  CalendarDays, // <--- 1. Import the icon
+  CalendarDays,
 } from "lucide-react";
-import { NavLink } from "@/components/NavLink";
+import { NavLink } from "@/components/NavLink"; // Ensure you have this component, or use react-router-dom
 import { cn } from "@/lib/utils";
 
 interface DashboardSidebarProps {
@@ -20,11 +19,10 @@ interface DashboardSidebarProps {
   onSearchClick: () => void;
 }
 
-// 2. Add Calendar to the navigation list
 const navItems = [
   { icon: Users, label: "Matches", path: "/dashboard" },
   { icon: Trophy, label: "Hackathons", path: "/dashboard/hackathons" },
-  { icon: CalendarDays, label: "Calendar", path: "/dashboard/calendar" }, // <--- New Item
+  { icon: CalendarDays, label: "Calendar", path: "/dashboard/calendar" },
   { icon: Lightbulb, label: "Idea Spark", path: "/dashboard/ideas" },
   {
     icon: Calculator,
@@ -53,12 +51,15 @@ export const DashboardSidebar = ({
         collapsed ? "w-16" : "w-64"
       )}
     >
+      {/* Header with Logo */}
       <div className="h-16 border-b border-border flex items-center justify-between px-4">
         {!collapsed && (
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-primary-foreground" />
-            </div>
+            <img
+              src="/logo252.png"
+              alt="GitTogether Logo"
+              className="w-8 h-8 object-contain"
+            />
             <span className="text-lg font-bold text-foreground">
               GitTogether
             </span>
@@ -76,6 +77,7 @@ export const DashboardSidebar = ({
         </button>
       </div>
 
+      {/* Navigation Links */}
       <nav className="flex-1 p-3 space-y-1">
         {/* Matches Button (First Item) */}
         {navItems.slice(0, 1).map((item) => (
@@ -97,7 +99,7 @@ export const DashboardSidebar = ({
           {!collapsed && <span className="font-medium">Search</span>}
         </button>
 
-        {/* Rest of the Links (Hackathons, Calendar, Idea Spark, etc.) */}
+        {/* Rest of the Links */}
         {navItems.slice(1).map((item) => (
           <NavLink
             key={item.path}
