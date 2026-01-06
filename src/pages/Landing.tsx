@@ -70,14 +70,14 @@ const Landing = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
           >
-            {/* UPDATED LINK: Points to the new Auth Page */}
+            {/* UPDATED BUTTON TEXT: "Get Started" instead of .EDU Login */}
             <Link to="/auth">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="neon-button px-8 py-4 rounded-full text-lg font-semibold text-primary-foreground flex items-center gap-2 mx-auto"
               >
-                Login with .EDU Email
+                Get Started
                 <ArrowRight className="w-5 h-5" />
               </motion.button>
             </Link>
@@ -172,7 +172,7 @@ const Landing = () => {
                 Join thousands of hackers already building winning teams on
                 GitTogether.
               </p>
-              {/* UPDATED LINK: Points to the new Auth Page */}
+
               <Link to="/auth">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -194,11 +194,10 @@ const Landing = () => {
             <div className="w-6 h-6 rounded-lg gradient-primary flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-primary-foreground" />
             </div>
-            {/* UPDATED NAME */}
             <span className="font-bold text-foreground">GitTogether</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            © 2024 GitTogether. All rights reserved.
+            © 2025 GitTogether. All rights reserved.
           </p>
         </div>
       </footer>

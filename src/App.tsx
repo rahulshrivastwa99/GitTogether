@@ -7,18 +7,17 @@ import { AuthProvider, useAuth } from "@/context/AuthContext"; // Import Auth Co
 
 // Pages
 import Landing from "./pages/Landing";
-import AuthPage from "./pages/AuthPage"; // Import the new Auth Page
+import AuthPage from "./pages/AuthPage";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import EquityCalculator from "./pages/EquityCalculator";
+import IdeaSpark from "./pages/IdeaSpark"; // <--- Import the new page
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 // --- PROTECTED ROUTE WRAPPER ---
-// This component checks if the user is logged in.
-// If yes, it shows the page. If no, it redirects to the Login page.
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
 
@@ -31,7 +30,6 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    {/* 1. Wrap the entire app in AuthProvider so we can check login status anywhere */}
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
@@ -40,14 +38,24 @@ const App = () => (
           <Routes>
             {/* --- PUBLIC ROUTES --- */}
             <Route path="/" element={<Landing />} />
-            <Route path="/auth" element={<AuthPage />} /> {/* New Login Page */}
+            <Route path="/auth" element={<AuthPage />} />
             <Route path="/onboarding" element={<Onboarding />} />
+
             {/* --- PROTECTED ROUTES (Require Login) --- */}
             <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            {/* NEW ROUTE: Idea Spark */}
+            <Route
+              path="/dashboard/ideas"
+              element={
+                <ProtectedRoute>
+                  <IdeaSpark />
                 </ProtectedRoute>
               }
             />
@@ -67,6 +75,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+
             {/* --- CATCH ALL --- */}
             <Route path="*" element={<NotFound />} />
           </Routes>

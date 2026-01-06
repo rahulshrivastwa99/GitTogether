@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
+  Lightbulb, // <--- Imported Lightbulb icon
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
@@ -17,8 +18,10 @@ interface DashboardSidebarProps {
   onSearchClick: () => void;
 }
 
+// Updated navigation items list
 const navItems = [
   { icon: Users, label: "Matches", path: "/dashboard" },
+  { icon: Lightbulb, label: "Idea Spark", path: "/dashboard/ideas" }, // <--- New Item
   {
     icon: Calculator,
     label: "Equity Calculator",
@@ -32,7 +35,7 @@ export const DashboardSidebar = ({
   onToggle,
   onSearchClick,
 }: DashboardSidebarProps) => {
-  // Shared classes for links and buttons to ensure they look identical
+  // Shared classes for links and buttons
   const itemClasses = cn(
     "flex items-center gap-3 px-3 py-3 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all group w-full text-left",
     collapsed && "justify-center"
@@ -54,7 +57,6 @@ export const DashboardSidebar = ({
             <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-primary-foreground" />
             </div>
-            {/* UPDATED NAME HERE */}
             <span className="text-lg font-bold text-foreground">
               GitTogether
             </span>
@@ -74,7 +76,7 @@ export const DashboardSidebar = ({
 
       {/* Navigation Links */}
       <nav className="flex-1 p-3 space-y-1">
-        {/* 1. Render "Matches" Link first */}
+        {/* 1. Matches Link */}
         {navItems.slice(0, 1).map((item) => (
           <NavLink
             key={item.path}
@@ -88,16 +90,13 @@ export const DashboardSidebar = ({
           </NavLink>
         ))}
 
-        {/* 2. Render Search Button directly underneath */}
-        <button
-          onClick={onSearchClick}
-          className={itemClasses} // Uses the exact same classes as NavLink
-        >
+        {/* 2. Search Button */}
+        <button onClick={onSearchClick} className={itemClasses}>
           <Search className="w-5 h-5 flex-shrink-0 group-hover:text-primary transition-colors" />
           {!collapsed && <span className="font-medium">Search</span>}
         </button>
 
-        {/* 3. Render remaining menu items (Calculator, Settings) */}
+        {/* 3. Remaining Links (Idea Spark, Calculator, Settings) */}
         {navItems.slice(1).map((item) => (
           <NavLink
             key={item.path}

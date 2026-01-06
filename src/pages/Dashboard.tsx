@@ -1,6 +1,20 @@
 import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { MessageCircle, RefreshCw } from "lucide-react";
+import {
+  MessageCircle,
+  RefreshCw,
+  Filter,
+  Zap,
+  Calendar,
+  TrendingUp,
+  Sparkles,
+  Search,
+  Github,
+  Loader2,
+  Check,
+  X,
+  GraduationCap,
+} from "lucide-react";
 
 // Components
 import { DashboardSidebar } from "@/components/DashboardSidebar";
@@ -9,6 +23,12 @@ import { SwipeControls } from "@/components/SwipeControls";
 import { MatchesSidebar } from "@/components/MatchesSidebar";
 import { UserSearch } from "@/components/UserSearch";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+// --- IMPORT AUTH CONTEXT ---
+import { useAuth } from "@/context/AuthContext";
 
 // --- TYPES ---
 export interface UserProfile {
@@ -21,18 +41,17 @@ export interface UserProfile {
   avatarGradient: string;
 }
 
-// --- MOCK DATA (20 Users) ---
+// --- MOCK DATA (12 Selected Profiles) ---
 const mockUsers: UserProfile[] = [
   {
     id: "1",
     name: "Aarav Patel",
     role: "Frontend Architect",
-    bio: "Obsessed with pixel-perfect UI and smooth animations. I dream in CSS and GSAP. Looking for a backend wizard.",
-    techStack: ["React", "TypeScript", "Tailwind", "Framer Motion", "Next.js"],
+    bio: "Obsessed with pixel-perfect UI. I dream in CSS and Framer Motion. Looking for a backend wizard.",
+    techStack: ["React", "TypeScript", "Tailwind", "Next.js"],
     achievements: [
       "Winner of Smart India Hackathon 2023",
-      "Maintained a repo with 500+ stars",
-      "Built a portfolio featured on Awwwards",
+      "500+ Stars on GitHub",
     ],
     avatarGradient: "linear-gradient(135deg, #FF6B6B 0%, #556270 100%)",
   },
@@ -40,249 +59,103 @@ const mockUsers: UserProfile[] = [
     id: "2",
     name: "Diya Sharma",
     role: "AI/ML Researcher",
-    bio: "Turning data into decisions. Currently working on LLMs for healthcare. Need a team to productize my research.",
-    techStack: ["Python", "PyTorch", "TensorFlow", "FastAPI", "Docker"],
-    achievements: [
-      "Published paper at ICCV 2024",
-      "Kaggle Grandmaster (Top 1%)",
-      "Developed a COVID-19 detection model",
-    ],
+    bio: "Turning data into decisions. Currently working on LLMs for healthcare.",
+    techStack: ["Python", "PyTorch", "TensorFlow", "FastAPI"],
+    achievements: ["Published paper at ICCV 2024", "Kaggle Grandmaster"],
     avatarGradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
   },
   {
     id: "3",
     name: "Vihaan Gupta",
     role: "Full Stack Ninja",
-    bio: "Jack of all trades, master of shipping fast. I love hackathons and caffeine. Let's build something crazy.",
-    techStack: ["MERN", "Redis", "AWS", "GraphQL", "Solidity"],
-    achievements: [
-      "Won 1st prize at ETHIndia 2024",
-      "Google Summer of Code (GSoC) 2023 Graduate",
-      "Built a crypto wallet with 10k+ users",
-    ],
+    bio: "Jack of all trades, master of shipping fast. I love hackathons and caffeine.",
+    techStack: ["MERN", "Redis", "AWS", "GraphQL"],
+    achievements: ["Won 1st prize at ETHIndia", "GSoC 2023 Graduate"],
     avatarGradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
   },
   {
     id: "4",
     name: "Ananya Singh",
     role: "UI/UX Designer",
-    bio: "I make complex systems look simple. Believer in 'User First'. Looking for devs who appreciate good design.",
-    techStack: ["Figma", "Adobe XD", "Spline", "CSS", "Storybook"],
-    achievements: [
-      "Top rated freelancer on Upwork",
-      "Designed app interface for a YC-backed startup",
-      "Adobe Creative Jam Winner",
-    ],
+    bio: "I make complex systems look simple. Believer in 'User First'.",
+    techStack: ["Figma", "Spline", "CSS", "Storybook"],
+    achievements: ["Top rated freelancer", "Adobe Creative Jam Winner"],
     avatarGradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
   },
   {
     id: "5",
     name: "Rohan Malhotra",
     role: "DevOps Engineer",
-    bio: "If it works on my machine, it will work on yours. I automate everything. Let's make sure our project never crashes.",
-    techStack: ["Kubernetes", "Docker", "Jenkins", "Go", "Terraform"],
-    achievements: [
-      "Certified Kubernetes Administrator (CKA)",
-      "Reduced server costs by 40%",
-      "Built a CI/CD pipeline serving 1M requests/day",
-    ],
+    bio: "If it works on my machine, it will work on yours. I automate everything.",
+    techStack: ["Kubernetes", "Docker", "Go", "Terraform"],
+    achievements: ["Certified Kubernetes Admin", "Reduced costs by 40%"],
     avatarGradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
   },
   {
     id: "6",
     name: "Ishita Verma",
     role: "Blockchain Developer",
-    bio: "Decentralizing the web one smart contract at a time. Rust enthusiast. Building a DAO for student communities.",
-    techStack: ["Solidity", "Rust", "Web3.js", "Hardhat", "Ether.js"],
-    achievements: [
-      "Polkadot Hackathon Finalist",
-      "Audited smart contracts holding $50k+",
-      "Core contributor to a DeFi protocol",
-    ],
+    bio: "Decentralizing the web one smart contract at a time. Rust enthusiast.",
+    techStack: ["Solidity", "Rust", "Web3.js", "Hardhat"],
+    achievements: ["Polkadot Hackathon Finalist", "Audited $50k+ contracts"],
     avatarGradient: "linear-gradient(135deg, #30cfd0 0%, #330867 100%)",
   },
   {
     id: "7",
     name: "Aditya Kumar",
     role: "Mobile Developer",
-    bio: "Flutter fanatic. I build apps that feel native on both iOS and Android. Let's win the 'Best Mobile App' category.",
-    techStack: ["Flutter", "Dart", "Firebase", "Kotlin", "Swift"],
-    achievements: [
-      "App featured on Play Store 'App of the Week'",
-      "100k+ downloads on personal app",
-      "HackHarvard 2023 Track Winner",
-    ],
+    bio: "Flutter fanatic. I build apps that feel native on both iOS and Android.",
+    techStack: ["Flutter", "Dart", "Firebase", "Kotlin"],
+    achievements: ["App featured on Play Store", "100k+ downloads"],
     avatarGradient: "linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)",
   },
   {
     id: "8",
     name: "Kavya Iyer",
     role: "Data Scientist",
-    bio: "I find stories in numbers. Expert in visualization and predictive modeling. Looking for a backend dev.",
-    techStack: ["Pandas", "Scikit-learn", "Tableau", "SQL", "R"],
+    bio: "I find stories in numbers. Expert in visualization and predictive modeling.",
+    techStack: ["Pandas", "Scikit-learn", "Tableau", "SQL"],
     achievements: [
-      "Gold Medalist in National Data Science Challenge",
-      "Predictive model improved sales by 15%",
-      "Mentor at Girls Who Code",
+      "Gold Medalist Data Challenge",
+      "Predictive model +15% sales",
     ],
-    avatarGradient:
-      "linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%)",
+    avatarGradient: "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)",
   },
   {
     id: "9",
     name: "Arjun Reddy",
     role: "Cybersecurity Analyst",
-    bio: "White hat hacker. I break things so we can fix them. Will ensure our project is secure from day one.",
-    techStack: ["Kali Linux", "Wireshark", "Python", "Bash", "PenTesting"],
-    achievements: [
-      "Found a critical bug in a major fintech app",
-      "CTF Regional Champion",
-      "Certified Ethical Hacker (CEH)",
-    ],
+    bio: "White hat hacker. I break things so we can fix them. Ensuring security first.",
+    techStack: ["Kali Linux", "Python", "Bash", "PenTesting"],
+    achievements: ["Found critical bug in fintech", "CTF Regional Champion"],
     avatarGradient: "linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)",
   },
   {
     id: "10",
     name: "Meera Nair",
-    role: "Product Manager / Dev",
-    bio: "Code + Business. I keep the team on track and the pitch deck looking sharp. I code a bit too (React).",
-    techStack: ["Jira", "React", "Analytics", "Notion", "Python"],
-    achievements: [
-      "Led a student club of 200+ members",
-      "Winner of 'Best Pitch' at Shark Tank College Edition",
-      "Interned at Flipkart as APM",
-    ],
+    role: "Product Manager",
+    bio: "Code + Business. I keep the team on track and the pitch deck looking sharp.",
+    techStack: ["Jira", "React", "Analytics", "Notion"],
+    achievements: ["Led club of 200+ members", "Winner 'Best Pitch'"],
     avatarGradient: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
   },
   {
     id: "11",
     name: "Siddharth Joshi",
     role: "Game Developer",
-    bio: "Building immersive worlds. Unity and Unreal expert. Want to gamify education or health?",
-    techStack: ["Unity", "C#", "Blender", "WebGL", "Three.js"],
-    achievements: [
-      "Game Jam Winner (Ludum Dare)",
-      "Published an indie game on Steam",
-      "Created a VR tour for university campus",
-    ],
+    bio: "Building immersive worlds. Unity and Unreal expert. Gamifying education.",
+    techStack: ["Unity", "C#", "Blender", "WebGL"],
+    achievements: ["Game Jam Winner", "Published indie game"],
     avatarGradient: "linear-gradient(135deg, #d299c2 0%, #fef9d7 100%)",
   },
   {
     id: "12",
     name: "Zara Khan",
     role: "Cloud Architect",
-    bio: "Scalability is my middle name. AWS Community Builder. I design systems that handle traffic spikes without sweating.",
-    techStack: ["AWS Lambda", "DynamoDB", "Serverless", "Azure", "Node.js"],
-    achievements: [
-      "AWS Community Builder Award",
-      "Architected a system handling 500 req/sec",
-      "Speaker at Cloud Community Day",
-    ],
+    bio: "Scalability is my middle name. AWS Community Builder.",
+    techStack: ["AWS Lambda", "DynamoDB", "Serverless", "Node.js"],
+    achievements: ["AWS Community Builder", "Handled 500 req/sec"],
     avatarGradient: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
-  },
-  {
-    id: "13",
-    name: "Kabir Singh",
-    role: "Backend Heavy Lifter",
-    bio: "Rustacean. I care about memory safety and concurrency. Your frontend needs a robust API? I got you.",
-    techStack: ["Rust", "Actix", "PostgreSQL", "Redis", "gRPC"],
-    achievements: [
-      "Contributed to the Rust compiler",
-      "Built a custom database engine for fun",
-      "Ranked 1st in University Coding Contest",
-    ],
-    avatarGradient: "linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)",
-  },
-  {
-    id: "14",
-    name: "Nikhil Chopra",
-    role: "IoT Innovator",
-    bio: "Connecting hardware to the cloud. Arduino, Raspberry Pi, and ESP32 are my toys. Let's build smart tech.",
-    techStack: ["C++", "MQTT", "Arduino", "Python", "Azure IoT"],
-    achievements: [
-      "Built a smart irrigation system for local farmers",
-      "Winner of Hardware Hackathon 2023",
-      "Patent pending for a wearable device",
-    ],
-    avatarGradient: "linear-gradient(135deg, #fff1eb 0%, #ace0f9 100%)",
-  },
-  {
-    id: "15",
-    name: "Riya Kapoor",
-    role: "QA Automation Engineer",
-    bio: "I hate bugs more than I love coffee. Selenium and Cypress expert. I ensure we ship quality code.",
-    techStack: ["Selenium", "Cypress", "Java", "JUnit", "Jenkins"],
-    achievements: [
-      "Automated 90% of manual tests for a non-profit",
-      "Found 50+ bugs in beta testing for a startup",
-      "Wrote a viral blog on 'Testing in Production'",
-    ],
-    avatarGradient: "linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)",
-  },
-  {
-    id: "16",
-    name: "Vikram Sethi",
-    role: "AR/VR Developer",
-    bio: "Merging physical and digital worlds. Experience with Meta Quest and Apple Vision Pro dev. Let's build the metaverse.",
-    techStack: ["Unity", "C#", "WebXR", "A-Frame", "Three.js"],
-    achievements: [
-      "Created an AR history tour app used by local museums",
-      "Hackathon winner for 'Best Use of AR'",
-      "Published VR game on SideQuest",
-    ],
-    avatarGradient: "linear-gradient(135deg, #42e695 0%, #3bb2b8 100%)",
-  },
-  {
-    id: "17",
-    name: "Sana Mir",
-    role: "Fintech Specialist",
-    bio: "Building the future of finance. Expert in secure transaction systems and banking APIs. Looking for a UI dev.",
-    techStack: ["Java", "Spring Boot", "Kafka", "Oracle", "Microservices"],
-    achievements: [
-      "Built a UPI payment gateway integration",
-      "Interned at a major investment bank",
-      "Winner of FinTech Innovation Challenge",
-    ],
-    avatarGradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-  },
-  {
-    id: "18",
-    name: "Rahul Verma",
-    role: "System Administrator",
-    bio: "Linux is my home. Bash scripting wizard. I ensure 99.99% uptime. Need a dev to build the frontend.",
-    techStack: ["Linux", "Bash", "Ansible", "Nginx", "Prometheus"],
-    achievements: [
-      "Managed server infrastructure for a college fest",
-      "Open source contributor",
-      "Red Hat Certified Engineer",
-    ],
-    avatarGradient: "linear-gradient(135deg, #5ee7df 0%, #b490ca 100%)",
-  },
-  {
-    id: "19",
-    name: "Priya Das",
-    role: "Frontend Developer",
-    bio: "Creative coder. I love Vue.js and Svelte. Animations and micro-interactions are my jam.",
-    techStack: ["Vue.js", "Svelte", "JavaScript", "GSAP", "Nuxt"],
-    achievements: [
-      "Created a CSS art gallery with 10k views",
-      "Speaker at local Vue.js meetup",
-      "Won 'Best UI' at State Level Hackathon",
-    ],
-    avatarGradient: "linear-gradient(135deg, #c3cfe2 0%, #c3cfe2 100%)",
-  },
-  {
-    id: "20",
-    name: "Amit Shah",
-    role: "Backend Architect",
-    bio: "Scalable Java systems are my forte. Experience with high-frequency trading platforms. Let's build something robust.",
-    techStack: ["Java", "Spring", "Hibernate", "Redis", "MySQL"],
-    achievements: [
-      "Optimized database queries reducing load time by 60%",
-      "Built a stock trading simulator",
-      "Oracle Certified Professional",
-    ],
-    avatarGradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
   },
 ];
 
@@ -296,18 +169,102 @@ const mockMatches = [
   },
 ];
 
+const filters = ["All", "Frontend", "Backend", "AI/ML", "Design", "Web3"];
+
+const upcomingHackathons = [
+  { name: "Smart India Hackathon", date: "Nov 15", status: "Registering" },
+  { name: "HackMIT 2025", date: "Dec 02", status: "Soon" },
+  { name: "ETHGlobal Online", date: "Dec 10", status: "Open" },
+];
+
+const trendingSkills = ["Rust", "Next.js 15", "Solidity", "GenAI"];
+
 // --- MAIN DASHBOARD COMPONENT ---
 const Dashboard = () => {
-  // State
+  // Access Auth Context
+  const { userEmail } = useAuth();
+
+  // Layout & UI State
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [matchesSidebarOpen, setMatchesSidebarOpen] = useState(false);
-
-  // Search State
+  const [activeFilter, setActiveFilter] = useState("All");
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // Profile System State
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [githubStatus, setGithubStatus] = useState<
+    "idle" | "loading" | "connected"
+  >("idle");
 
   // Data State
   const [users, setUsers] = useState<UserProfile[]>(mockUsers);
   const [matches] = useState(mockMatches);
+
+  // --- DYNAMIC USER PROFILE (From Login) ---
+  // Helper to extract name from email (e.g. madhav.kalra@bpit.edu -> Madhav Kalra)
+  const formatNameFromEmail = (email: string | null) => {
+    if (!email) return "Guest User";
+    const namePart = email.split("@")[0];
+    return namePart
+      .split(/[._]/)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
+  const formatCollegeFromEmail = (email: string | null) => {
+    if (!email) return "University";
+    const domain = email.split("@")[1];
+    if (domain.includes("bpit")) return "BPIT, GGSIPU";
+    if (domain.includes("iit")) return "IIT Delhi";
+    return domain.split(".")[0].toUpperCase() + " University";
+  };
+
+  const myProfile = {
+    name: formatNameFromEmail(userEmail),
+    email: userEmail || "guest@example.com",
+    role: "Student Developer", // Default role
+    college: formatCollegeFromEmail(userEmail),
+    bio: "Passionate about building cool stuff. Looking for a hackathon team to ship projects that matter.",
+    techStack: ["React", "JavaScript", "Python"], // Default stack
+    stats: { swipes: 12, matches: 0, karma: 100 },
+  };
+
+  // --- FILTER LOGIC ---
+  useEffect(() => {
+    if (activeFilter === "All") {
+      setUsers(mockUsers);
+    } else {
+      const filtered = mockUsers.filter((user) => {
+        const roleMatch = user.role
+          .toLowerCase()
+          .includes(activeFilter.toLowerCase());
+        const techMatch = user.techStack.some(
+          (tech) =>
+            tech.toLowerCase().includes(activeFilter.toLowerCase()) ||
+            (activeFilter === "Frontend" &&
+              ["React", "Vue", "Angular", "CSS", "UI"].some((t) =>
+                tech.includes(t)
+              )) ||
+            (activeFilter === "Backend" &&
+              ["Node", "Java", "Go", "Python", "SQL"].some((t) =>
+                tech.includes(t)
+              )) ||
+            (activeFilter === "AI/ML" &&
+              ["Python", "TensorFlow", "Pandas", "AI"].some((t) =>
+                tech.includes(t)
+              )) ||
+            (activeFilter === "Web3" &&
+              ["Solidity", "Rust", "Blockchain"].some((t) =>
+                tech.includes(t)
+              )) ||
+            (activeFilter === "Design" &&
+              ["Figma", "Adobe", "UX"].some((t) => tech.includes(t)))
+        );
+        return roleMatch || techMatch;
+      });
+      setUsers(filtered);
+    }
+  }, [activeFilter]);
 
   // Keyboard shortcut (Cmd+K)
   useEffect(() => {
@@ -321,7 +278,6 @@ const Dashboard = () => {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  // Handlers
   const handleSwipe = (direction: "left" | "right") => {
     if (users.length > 0) {
       setUsers((prev) => prev.slice(1));
@@ -331,104 +287,322 @@ const Dashboard = () => {
   const handleSelectUser = (userId: string) => {
     const selectedUser = mockUsers.find((u) => u.id === userId);
     if (selectedUser) {
-      setUsers([selectedUser]); // Filter to show only the selected user
-      setSearchOpen(false); // Close search window
+      setUsers([selectedUser]);
+      setSearchOpen(false);
     }
   };
 
   const handleReset = () => {
-    setUsers(mockUsers); // Reset to show all users again
+    if (activeFilter === "All") {
+      setUsers(mockUsers);
+    } else {
+      const temp = activeFilter;
+      setActiveFilter("All");
+      setTimeout(() => setActiveFilter(temp), 10);
+    }
+  };
+
+  const handleConnectGithub = () => {
+    if (githubStatus === "connected") return;
+    setGithubStatus("loading");
+    setTimeout(() => {
+      setGithubStatus("connected");
+    }, 1500);
   };
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground font-sans">
-      {/* 1. SIDEBAR (With Search Button Connected) */}
+    <div className="flex h-screen w-full bg-background text-foreground font-sans overflow-hidden">
+      {/* 1. LEFT SIDEBAR */}
       <DashboardSidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-        onSearchClick={() => setSearchOpen(true)} // <-- This makes the button work
+        onSearchClick={() => setSearchOpen(true)}
       />
 
-      {/* 2. MAIN CONTENT */}
-      <main className="flex-1 relative overflow-hidden flex flex-col">
-        {/* Header */}
-        <motion.header
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="h-16 glass border-b flex items-center justify-between px-6 z-10"
-        >
-          <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400">
-            Find Your Match
-          </h1>
-          <Button
-            variant="secondary"
-            className="relative gap-2 rounded-xl"
-            onClick={() => setMatchesSidebarOpen(true)}
-          >
-            <MessageCircle className="w-5 h-5 text-muted-foreground" />
-            <span className="hidden sm:inline font-medium">Matches</span>
-            {matches.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center animate-bounce">
-                {matches.length}
-              </span>
-            )}
-          </Button>
-        </motion.header>
-
-        {/* Swipe/Card Area */}
-        <div className="flex-1 flex flex-col items-center justify-center p-4 relative">
-          {/* SEARCH POPUP WINDOW */}
-          <UserSearch
-            open={searchOpen}
-            onOpenChange={setSearchOpen}
-            users={mockUsers}
-            onSelectUser={handleSelectUser}
-          />
-
-          {users.length > 0 ? (
-            <>
-              <div className="relative h-[550px] w-full max-w-sm mt-4 perspective-1000">
-                <AnimatePresence mode="popLayout">
-                  {users
-                    .slice(0, 3)
-                    .map((user, index) => (
-                      <SwipeCard
-                        key={user.id}
-                        user={user}
-                        onSwipe={handleSwipe}
-                        isTop={index === 0}
-                      />
-                    ))
-                    .reverse()}
-                </AnimatePresence>
+      {/* 2. MAIN CONTENT WRAPPER */}
+      <main className="flex-1 flex overflow-hidden relative">
+        {/* CENTER COLUMN: SWIPE AREA */}
+        <div className="flex-1 flex flex-col h-full relative">
+          {/* Header & Filter Bar */}
+          <div className="flex-shrink-0 p-6 z-10">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                  Find Your Squad{" "}
+                  <Zap className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  Swipe right to connect, left to skip.
+                </p>
               </div>
 
-              <div className="mt-8 z-10">
-                <SwipeControls
-                  onPass={() => handleSwipe("left")}
-                  onConnect={() => handleSwipe("right")}
-                />
-              </div>
-            </>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="text-center p-8 max-w-md"
-            >
-              <div className="w-24 h-24 rounded-full bg-muted mx-auto mb-6 flex items-center justify-center animate-pulse">
-                <span className="text-4xl">🎉</span>
-              </div>
-              <h2 className="text-2xl font-bold mb-2">You've seen everyone!</h2>
-              <p className="text-muted-foreground mb-6">
-                That's all the developers we have for now. Check back later!
-              </p>
-              <Button onClick={handleReset} variant="outline" className="gap-2">
-                <RefreshCw className="w-4 h-4" /> Start Over
+              {/* Mobile: Matches Toggle */}
+              <Button
+                onClick={() => setMatchesSidebarOpen(true)}
+                variant="secondary"
+                className="lg:hidden relative gap-2 rounded-xl"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span className="hidden sm:inline">Matches</span>
+                {matches.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-[10px] font-bold text-primary-foreground flex items-center justify-center">
+                    {matches.length}
+                  </span>
+                )}
               </Button>
-            </motion.div>
-          )}
+            </div>
+
+            {/* Filter Pills */}
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full gap-2 border-dashed flex-shrink-0"
+              >
+                <Filter className="w-3 h-3" /> Filters
+              </Button>
+              {filters.map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setActiveFilter(f)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${
+                    activeFilter === f
+                      ? "bg-foreground text-background"
+                      : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Swipe/Card Area */}
+          <div className="flex-1 flex flex-col items-center justify-center relative p-4 min-h-0">
+            <UserSearch
+              open={searchOpen}
+              onOpenChange={setSearchOpen}
+              users={mockUsers}
+              onSelectUser={handleSelectUser}
+            />
+
+            {/* Background Decoration */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
+              <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+              <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
+            </div>
+
+            {users.length > 0 ? (
+              <>
+                <div className="relative w-full max-w-sm aspect-[3/4] max-h-[500px] z-20">
+                  <AnimatePresence mode="popLayout">
+                    {users
+                      .slice(0, 3)
+                      .map((user, index) => (
+                        <SwipeCard
+                          key={user.id}
+                          user={user}
+                          onSwipe={handleSwipe}
+                          isTop={index === 0}
+                        />
+                      ))
+                      .reverse()}
+                  </AnimatePresence>
+                </div>
+
+                <div className="mt-6 z-20 flex-shrink-0 pb-2">
+                  <SwipeControls
+                    onPass={() => handleSwipe("left")}
+                    onConnect={() => handleSwipe("right")}
+                  />
+                </div>
+              </>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center p-8 max-w-md z-20"
+              >
+                <div className="w-24 h-24 rounded-full bg-muted mx-auto mb-6 flex items-center justify-center animate-pulse">
+                  <span className="text-4xl">🎉</span>
+                </div>
+                <h2 className="text-2xl font-bold mb-2">
+                  No more {activeFilter !== "All" ? activeFilter : ""}{" "}
+                  developers!
+                </h2>
+                <p className="text-muted-foreground mb-6">
+                  Try changing the filter or check back later.
+                </p>
+                <Button
+                  onClick={handleReset}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <RefreshCw className="w-4 h-4" /> Reset Filters
+                </Button>
+              </motion.div>
+            )}
+          </div>
         </div>
+
+        {/* RIGHT COLUMN: WIDGETS */}
+        <aside className="w-80 border-l border-border bg-card/30 backdrop-blur-xl p-6 hidden xl:flex flex-col gap-6 h-full overflow-y-auto flex-shrink-0">
+          {/* Widget 1: Profile (CLICKABLE) */}
+          <Card
+            className="p-4 border-border/50 bg-card/50 hover:bg-card/80 transition-colors cursor-pointer group"
+            onClick={() => setShowProfileModal(true)}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10 border-2 border-primary/20">
+                  <AvatarImage
+                    src={`https://api.dicebear.com/7.x/initials/svg?seed=${myProfile.name}`}
+                  />
+                  <AvatarFallback>{myProfile.name[0]}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="font-bold text-sm group-hover:text-primary transition-colors">
+                    {myProfile.name}
+                  </h3>
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] h-4 px-1 text-green-500 border-green-500/20 bg-green-500/10"
+                  >
+                    Online
+                  </Badge>
+                </div>
+              </div>
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMatchesSidebarOpen(true);
+                }}
+              >
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MessageCircle className="w-4 h-4 text-primary" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="p-2 bg-muted/50 rounded-lg">
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  Swipes
+                </div>
+                <div className="font-bold text-sm">
+                  {myProfile.stats.swipes}
+                </div>
+              </div>
+              <div className="p-2 bg-muted/50 rounded-lg">
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  Matches
+                </div>
+                <div className="font-bold text-sm text-primary">
+                  {matches.length}
+                </div>
+              </div>
+              <div className="p-2 bg-muted/50 rounded-lg">
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  Karma
+                </div>
+                <div className="font-bold text-sm">{myProfile.stats.karma}</div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Widget 2: Hackathons */}
+          <div>
+            <h3 className="font-bold text-xs mb-3 flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+              <Calendar className="w-3 h-3" /> Hackathon Radar
+            </h3>
+            <div className="space-y-3">
+              {upcomingHackathons.map((hack, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-muted/20 hover:bg-muted/40 transition-colors border border-transparent hover:border-border cursor-pointer group"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center text-xs font-bold text-primary group-hover:scale-105 transition-transform">
+                    {hack.date.split(" ")[1]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm truncate">
+                      {hack.name}
+                    </div>
+                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          hack.status === "Open"
+                            ? "bg-green-500"
+                            : "bg-yellow-500"
+                        }`}
+                      />
+                      {hack.status}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Widget 3: Trending */}
+          <div>
+            <h3 className="font-bold text-xs mb-3 flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
+              <TrendingUp className="w-3 h-3" /> Trending Skills
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {trendingSkills.map((skill) => (
+                <Badge
+                  key={skill}
+                  variant="secondary"
+                  className="hover:bg-primary/20 hover:text-primary cursor-pointer transition-colors text-xs"
+                >
+                  # {skill}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          {/* Widget 4: Pro Tip & GitHub Connect */}
+          <div className="mt-auto p-4 rounded-xl bg-gradient-to-br from-purple-900/50 to-blue-900/50 border border-purple-500/20">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-purple-500/20 text-purple-300">
+                <Github className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-bold text-sm text-purple-100 mb-1">
+                  Boost Your Profile
+                </h4>
+                <p className="text-xs text-purple-200/70 mb-3">
+                  Add a GitHub repo to get 3x more matches.
+                </p>
+
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className={`w-full h-8 text-xs border-none transition-all ${
+                    githubStatus === "connected"
+                      ? "bg-green-500/20 text-green-300 hover:bg-green-500/30"
+                      : "bg-purple-500/20 text-purple-200 hover:bg-purple-500/30"
+                  }`}
+                  onClick={handleConnectGithub}
+                  disabled={githubStatus !== "idle"}
+                >
+                  {githubStatus === "loading" && (
+                    <Loader2 className="w-3 h-3 animate-spin mr-2" />
+                  )}
+                  {githubStatus === "connected" && (
+                    <Check className="w-3 h-3 mr-2" />
+                  )}
+                  {githubStatus === "idle"
+                    ? "Connect GitHub"
+                    : githubStatus === "loading"
+                    ? "Connecting..."
+                    : "Connected"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </aside>
       </main>
 
       {/* 3. RIGHT SIDEBAR (Matches & Chat) */}
@@ -438,6 +612,79 @@ const Dashboard = () => {
         onClose={() => setMatchesSidebarOpen(false)}
         icebreaker="Ask about their favorite tech stack!"
       />
+
+      {/* --- MY PROFILE MODAL --- */}
+      <AnimatePresence>
+        {showProfileModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowProfileModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
+            >
+              <div className="h-24 bg-gradient-to-r from-primary to-purple-500/50" />
+              <div className="px-6 pb-6">
+                <div className="relative -mt-12 mb-4 flex justify-between items-end">
+                  <Avatar className="h-24 w-24 border-4 border-background bg-card">
+                    <AvatarImage
+                      src={`https://api.dicebear.com/7.x/initials/svg?seed=${myProfile.name}`}
+                    />
+                    <AvatarFallback>{myProfile.name[0]}</AvatarFallback>
+                  </Avatar>
+                  <Button variant="outline" size="sm" className="rounded-full">
+                    Edit Profile
+                  </Button>
+                </div>
+
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold">{myProfile.name}</h2>
+                  <p className="text-primary font-medium">{myProfile.role}</p>
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm mt-1">
+                    <GraduationCap className="w-4 h-4" />
+                    {myProfile.college}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="p-3 bg-muted/30 rounded-xl border border-border/50">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                      About
+                    </h4>
+                    <p className="text-sm leading-relaxed">{myProfile.bio}</p>
+                  </div>
+
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
+                      Tech Stack
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {myProfile.techStack.map((t) => (
+                        <Badge key={t} variant="secondary">
+                          {t}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowProfileModal(false)}
+                className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 rounded-full text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
