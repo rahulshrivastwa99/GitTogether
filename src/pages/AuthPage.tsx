@@ -6,7 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import axios from "axios";
-import { Sparkles, Mail, ArrowRight, Loader2, AlertCircle } from "lucide-react";
+import {
+  Sparkles,
+  Mail,
+  ArrowRight,
+  Loader2,
+  AlertCircle,
+  Lock,
+  User,
+} from "lucide-react";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -14,12 +22,11 @@ export default function AuthPage() {
   const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
-    identifier: "", // Maps to 'email'
+    identifier: "",
     password: "",
     name: "",
   });
 
-  // Get login function from our updated AuthContext
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -40,15 +47,18 @@ export default function AuthPage() {
 
         const data = response.data;
 
-        // 1. Update Context (Save Token + Onboarding Status)
-        // Ensure your AuthContext 'login' accepts 3 arguments now
+        // 1. Update Context
         login(data.token, data.user.email, data.user.isOnboarded);
 
-        // 2. Smart Redirection
+        // 2. 🔥 SAVE DETAILS TO STORAGE (So Dashboard sees "Rahul" not "Anonymous")
+        localStorage.setItem("userName", data.user.name || "");
+        localStorage.setItem("userCollege", data.user.college || "");
+        localStorage.setItem("userRole", data.user.role || "");
+
+        // 3. Redirect based on status
         if (data.user.isOnboarded) {
           navigate("/dashboard");
         } else {
-          // Force them to fill profile if they haven't yet
           navigate("/onboarding");
         }
       } else {
@@ -59,21 +69,19 @@ export default function AuthPage() {
           password: formData.password,
         });
 
-        alert("Account created successfully! Please login.");
-        setIsLogin(true); // Switch to login view
+        alert("Account created! Please login.");
+        setIsLogin(true);
       }
     } catch (err: any) {
       console.error("Auth Error:", err);
-      setError(
-        err.response?.data?.message ||
-          "Connection failed. Check if server is running."
-      );
+      setError(err.response?.data?.message || "Connection failed.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
+    // ... (Keep your existing JSX return exactly as it was)
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px]" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-purple-500/20 rounded-full blur-[120px]" />
@@ -101,22 +109,26 @@ export default function AuthPage() {
           {!isLogin && (
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                placeholder="John Doe"
-                className="bg-background/50"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                required
-              />
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="name"
+                  placeholder="John Doe"
+                  className="bg-background/50 pl-10"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  required
+                />
+              </div>
             </div>
           )}
 
           <div className="space-y-2">
             <Label htmlFor="identifier">Email Address</Label>
             <div className="relative">
+              <Mail className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
               <Input
                 id="identifier"
                 type="email"
@@ -128,23 +140,25 @@ export default function AuthPage() {
                 }
                 required
               />
-              <Mail className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              className="bg-background/50"
-              value={formData.password}
-              onChange={(e) =>
-                setFormData({ ...formData, password: e.target.value })
-              }
-              required
-            />
+            <div className="relative">
+              <Lock className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                className="bg-background/50 pl-10"
+                value={formData.password}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
+                required
+              />
+            </div>
           </div>
 
           {error && (
