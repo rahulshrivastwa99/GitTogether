@@ -10,11 +10,11 @@ import {
   CalendarDays,
   FileText,
   BarChart3,
-  LogOut, // 1. LogOut icon import kiya
+  LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/context/AuthContext"; // 2. useAuth import kiya
+import { useAuth } from "@/context/AuthContext";
 
 interface DashboardSidebarProps {
   collapsed: boolean;
@@ -37,7 +37,7 @@ export const DashboardSidebar = ({
   onToggle,
   onSearchClick,
 }: DashboardSidebarProps) => {
-  const { logout } = useAuth(); // 3. Logout function nikala
+  const { logout } = useAuth();
 
   const itemClasses = cn(
     "flex items-center gap-3 px-3 py-3 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all group w-full text-left",
@@ -53,14 +53,19 @@ export const DashboardSidebar = ({
         collapsed ? "w-16" : "w-64"
       )}
     >
-      {/* HEADER WITH LOGO */}
+      {/* HEADER WITH WORKING LOGO */}
       <div className="h-16 border-b border-border flex items-center justify-between px-4">
         {!collapsed && (
           <div className="flex items-center gap-2">
-            <img
-              src="/logo252.png"
-              alt="GitTogether Logo"
-              className="w-8 h-8 object-contain"
+            {/* FIXED: Simple SVG as background-image */}
+            <div
+              className="w-8 h-8 rounded-xl flex-shrink-0 bg-gradient-to-br from-gray-800 to-black"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23222222'/%3E%3Ccircle cx='35' cy='40' r='12' fill='%23FF6B6B'/%3E%3Crect x='28' y='55' width='14' height='28' rx='7' fill='%23FF6B6B'/%3E%3Ccircle cx='65' cy='40' r='12' fill='%2342C2FF'/%3E%3Crect x='58' y='55' width='14' height='28' rx='7' fill='%2342C2FF'/%3E%3Cpath d='M35 65 Q50 50 65 65' stroke='%2300FF88' stroke-width='4' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='50' cy='52' r='3' fill='%2300FF88'/%3E%3C/svg%3E")`,
+                backgroundSize: "100%",
+                backgroundPosition: "center",
+                backgroundRepeat: "no-repeat",
+              }}
             />
             <span className="text-lg font-bold text-foreground">
               GitTogether
@@ -112,7 +117,7 @@ export const DashboardSidebar = ({
         ))}
       </nav>
 
-      {/* 4. LOGOUT SECTION (Sidebar ke bottom mein) */}
+      {/* LOGOUT SECTION */}
       <div className="p-3 border-t border-border">
         <button
           onClick={logout}
