@@ -8,11 +8,13 @@ import {
   Lightbulb,
   Trophy,
   CalendarDays,
-  FileText, // For Team Contract
-  BarChart3, // For Team Balance
+  FileText,
+  BarChart3,
+  LogOut, // 1. LogOut icon import kiya
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext"; // 2. useAuth import kiya
 
 interface DashboardSidebarProps {
   collapsed: boolean;
@@ -20,10 +22,9 @@ interface DashboardSidebarProps {
   onSearchClick: () => void;
 }
 
-// --- NAVIGATION ITEMS ---
 const navItems = [
   { icon: Users, label: "Matches", path: "/dashboard" },
-  { icon: BarChart3, label: "Team Balance", path: "/dashboard/team-analysis" }, // <--- FEATURE ADDED HERE
+  { icon: BarChart3, label: "Team Balance", path: "/dashboard/team-analysis" },
   { icon: Trophy, label: "Hackathons", path: "/dashboard/hackathons" },
   { icon: FileText, label: "Team Contract", path: "/dashboard/contract" },
   { icon: CalendarDays, label: "Calendar", path: "/dashboard/calendar" },
@@ -36,6 +37,8 @@ export const DashboardSidebar = ({
   onToggle,
   onSearchClick,
 }: DashboardSidebarProps) => {
+  const { logout } = useAuth(); // 3. Logout function nikala
+
   const itemClasses = cn(
     "flex items-center gap-3 px-3 py-3 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all group w-full text-left",
     collapsed && "justify-center"
@@ -100,7 +103,6 @@ export const DashboardSidebar = ({
           <NavLink
             key={item.path}
             to={item.path}
-            end={item.path === "/dashboard"}
             className={itemClasses}
             activeClassName="bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
           >
@@ -109,6 +111,20 @@ export const DashboardSidebar = ({
           </NavLink>
         ))}
       </nav>
+
+      {/* 4. LOGOUT SECTION (Sidebar ke bottom mein) */}
+      <div className="p-3 border-t border-border">
+        <button
+          onClick={logout}
+          className={cn(
+            itemClasses,
+            "hover:bg-destructive/10 hover:text-destructive text-muted-foreground/80"
+          )}
+        >
+          <LogOut className="w-5 h-5 flex-shrink-0 transition-colors" />
+          {!collapsed && <span className="font-medium">Logout</span>}
+        </button>
+      </div>
     </motion.aside>
   );
 };

@@ -5,22 +5,17 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Sparkles,
-  Mail, // Changed from GraduationCap
-  ArrowRight,
-  Loader2,
-  AlertCircle,
-} from "lucide-react";
+import axios from "axios"; // 1. Axios Import kiya
+import { Sparkles, Mail, ArrowRight, Loader2, AlertCircle } from "lucide-react";
+import React, { createContext, useContext, useEffect } from "react";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Changed 'email' to 'identifier' to allow phone numbers too
   const [formData, setFormData] = useState({
-    identifier: "",
+    identifier: "", // Yeh backend ke 'email' field mein jayega
     password: "",
     name: "",
   });
@@ -33,32 +28,44 @@ export default function AuthPage() {
     setError("");
     setIsLoading(true);
 
-    // 1. SIMULATE NETWORK DELAY
-    setTimeout(() => {
-      // 2. UPDATED VALIDATION LOGIC (No .edu check)
+    try {
+      const API_URL = "http://localhost:5000/api";
 
-      // Basic length check for Email or Phone
-      if (formData.identifier.length < 3) {
-        setError("Please enter a valid email or mobile number.");
-        setIsLoading(false);
-        return;
+      if (isLogin) {
+        // Login Request
+        const response = await axios.post(`${API_URL}/login`, {
+          email: formData.identifier,
+          password: formData.password,
+        });
+
+        // Response se token aur email nikal kar Context mein bhejें
+        const { token } = response.data;
+        login(formData.identifier, token);
+
+        navigate("/dashboard");
+      } else {
+        // Signup Request
+        await axios.post(`${API_URL}/signup`, {
+          name: formData.name,
+          email: formData.identifier,
+          password: formData.password,
+        });
+
+        alert("Account created successfully! Please login.");
+        setIsLogin(true);
       }
-
-      if (formData.password.length < 6) {
-        setError("Password must be at least 6 characters.");
-        setIsLoading(false);
-        return;
-      }
-
-      // 3. SUCCESSFUL LOGIN
-      login(formData.identifier);
-      navigate("/dashboard");
-    }, 1500);
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message ||
+          "Connection failed. Check if server is running."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background Gradients */}
       <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px]" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-purple-500/20 rounded-full blur-[120px]" />
 
@@ -67,7 +74,6 @@ export default function AuthPage() {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md bg-card border border-border rounded-3xl p-8 shadow-2xl relative z-10"
       >
-        {/* Header */}
         <div className="text-center mb-8">
           <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-4 text-primary">
             <Sparkles className="w-6 h-6" />
@@ -77,14 +83,12 @@ export default function AuthPage() {
           </h1>
           <p className="text-muted-foreground text-sm">
             {isLogin
-              ? "Login to find your perfect hackathon team."
+              ? "Login to find your perfect team."
               : "Create an account to get started."}
           </p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name Field (Signup Only) */}
           {!isLogin && (
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
@@ -101,14 +105,13 @@ export default function AuthPage() {
             </div>
           )}
 
-          {/* Identifier Field (Email or Phone) */}
           <div className="space-y-2">
-            <Label htmlFor="identifier">Email or Mobile Number</Label>
+            <Label htmlFor="identifier">Email Address</Label>
             <div className="relative">
               <Input
                 id="identifier"
-                type="text" // Changed from 'email' to 'text' to allow phone numbers
-                placeholder="name@example.com or 9876543210"
+                type="email"
+                placeholder="name@example.com"
                 className="bg-background/50 pl-10"
                 value={formData.identifier}
                 onChange={(e) =>
@@ -116,12 +119,10 @@ export default function AuthPage() {
                 }
                 required
               />
-              {/* Changed Icon to Mail (Generic) */}
               <Mail className="w-4 h-4 absolute left-3 top-3.5 text-muted-foreground" />
             </div>
           </div>
 
-          {/* Password Field */}
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <Input
@@ -137,7 +138,6 @@ export default function AuthPage() {
             />
           </div>
 
-          {/* Error Message */}
           {error && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
@@ -160,11 +160,10 @@ export default function AuthPage() {
             ) : (
               <ArrowRight className="w-4 h-4 mr-2" />
             )}
-            {isLoading ? "Verifying..." : isLogin ? "Login" : "Create Account"}
+            {isLoading ? "Connecting..." : isLogin ? "Login" : "Create Account"}
           </Button>
         </form>
 
-        {/* Toggle Login/Signup */}
         <div className="mt-6 text-center text-sm">
           <span className="text-muted-foreground">
             {isLogin ? "Don't have an account? " : "Already have an account? "}
