@@ -10,23 +10,21 @@ import Landing from "./pages/Landing";
 import AuthPage from "./pages/AuthPage";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
-import EquityCalculator from "./pages/EquityCalculator";
 import IdeaSpark from "./pages/IdeaSpark";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import HackathonPage from "./pages/HackathonPage";
-import CalendarPage from "./pages/CalendarPage"; // <--- 1. IMPORT THIS
+import CalendarPage from "./pages/CalendarPage";
+import TeamAnalysis from "./pages/TeamAnalysis"; // <--- IMPORT THIS
+import TeamAgreement from "./pages/TeamAgreement";
 
 const queryClient = new QueryClient();
 
-// --- PROTECTED ROUTE WRAPPER ---
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
-
   if (!isAuthenticated) {
     return <Navigate to="/auth" replace />;
   }
-
   return children;
 };
 
@@ -38,12 +36,10 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {/* --- PUBLIC ROUTES --- */}
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/onboarding" element={<Onboarding />} />
 
-            {/* --- PROTECTED ROUTES (Require Login) --- */}
             <Route
               path="/dashboard"
               element={
@@ -53,7 +49,24 @@ const App = () => (
               }
             />
 
-            {/* NEW ROUTE: Calendar */}
+            {/* NEW TEAM BALANCE ROUTE */}
+            <Route
+              path="/dashboard/team-analysis"
+              element={
+                <ProtectedRoute>
+                  <TeamAnalysis />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/dashboard/contract"
+              element={
+                <ProtectedRoute>
+                  <TeamAgreement />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/dashboard/calendar"
               element={
@@ -62,7 +75,6 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-
             <Route
               path="/dashboard/hackathons"
               element={
@@ -71,7 +83,6 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-
             <Route
               path="/dashboard/ideas"
               element={
@@ -80,16 +91,6 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-
-            <Route
-              path="/dashboard/calculator"
-              element={
-                <ProtectedRoute>
-                  <EquityCalculator />
-                </ProtectedRoute>
-              }
-            />
-
             <Route
               path="/dashboard/settings"
               element={
@@ -99,7 +100,6 @@ const App = () => (
               }
             />
 
-            {/* --- CATCH ALL --- */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

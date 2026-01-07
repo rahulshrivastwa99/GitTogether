@@ -1,192 +1,258 @@
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import {
-  MapPin,
-  Users,
-  Trophy,
-  ArrowRight,
-  Clock,
   Search,
-  X,
-  CalendarPlus, // New Icon
+  MapPin,
+  Calendar,
   ExternalLink,
-  Sparkles,
-  UserPlus, // New Icon
+  Trophy,
+  Loader2,
+  RefreshCw,
+  AlertCircle,
+  Clock,
+  Globe,
+  Users,
+  BookOpen,
+  Info,
 } from "lucide-react";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Ensure this is imported
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
-// --- MOCK HACKATHON DATA ---
-const HACKATHONS = [
+// --- 1. UPDATED INTERFACE (Added Description) ---
+interface Hackathon {
+  id: string;
+  title: string;
+  host: string;
+  location: string;
+  prize: string;
+  dates: string;
+  startDate: string;
+  endDate: string;
+  status: "Live" | "Upcoming";
+  link: string;
+  description: string; // New field for the "Text Box" detail
+}
+
+// --- 2. BACKUP DATA WITH DESCRIPTIONS ---
+const BACKUP_HACKATHONS: Hackathon[] = [
   {
-    id: 1,
-    title: "Innovators Hackathon 2026",
-    organizer: "T-Hub & NMIET",
-    status: "Live",
-    date: "Jan 22 - Jan 23, 2026",
-    mode: "Offline (Pune)",
-    participants: "5000+",
-    prizes: "₹10 Lakhs",
-    tags: ["Robotics", "AI/ML", "Hardware"],
-    gradient: "from-blue-600 to-indigo-600",
-    desc: "A 48-hour non-stop innovation challenge to bridge the gap between academia and industry.",
-    // New Data for Squad Matcher
-    interestedUsers: [
-      {
-        name: "Rahul V.",
-        role: "AI Engineer",
-        img: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rahul",
-      },
-      {
-        name: "Sara K.",
-        role: "Designer",
-        img: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sara",
-      },
-      {
-        name: "Amit S.",
-        role: "Backend",
-        img: "https://api.dicebear.com/7.x/avataaars/svg?seed=Amit",
-      },
-    ],
-  },
-  {
-    id: 2,
-    title: "IIT Kanpur E-Summit '26",
-    organizer: "IIT Kanpur E-Cell",
-    status: "Live",
-    date: "Jan 23 - Jan 25, 2026",
-    mode: "Hybrid",
-    participants: "15k+",
-    prizes: "₹25 Lakhs",
-    tags: ["FinTech", "Startup"],
-    gradient: "from-orange-500 to-red-500",
-    desc: "The flagship event of IIT Kanpur featuring multiple hackathons like 'BizEntangle'.",
-    interestedUsers: [
-      {
-        name: "Priya M.",
-        role: "Frontend",
-        img: "https://api.dicebear.com/7.x/avataaars/svg?seed=Priya",
-      },
-      {
-        name: "Dev P.",
-        role: "Full Stack",
-        img: "https://api.dicebear.com/7.x/avataaars/svg?seed=Dev",
-      },
-    ],
-  },
-  // ... (Add 'interestedUsers' to other items similarly if you want, or leave undefined to test empty state)
-  {
-    id: 3,
-    title: "HackWithInfy 2026",
-    organizer: "Infosys",
+    id: "m1",
+    title: "Smart India Hackathon 2026",
+    host: "Ministry of Education",
+    location: "Nationwide",
+    prize: "₹1 Crore Pool",
+    dates: "Aug 2026",
+    startDate: "2026-08-01",
+    endDate: "2026-08-05",
     status: "Upcoming",
-    date: "Registrations: Feb 2026",
-    mode: "Online",
-    participants: "1 Lakh+",
-    prizes: "Job Offers",
-    tags: ["Coding", "Hiring"],
-    gradient: "from-pink-600 to-purple-600",
-    desc: "Infosys's flagship coding competition for engineering students.",
-    interestedUsers: [],
+    link: "https://sih.gov.in/",
+    description:
+      "The world's largest open innovation model! Smart India Hackathon 2026 invites students to solve some of the most pressing problems we face in our daily lives. Themes include Smart Automation, Heritage & Culture, and Clean Water.",
   },
   {
-    id: 6,
-    title: "Flipkart GRiD 8.0",
-    organizer: "Flipkart",
+    id: "m2",
+    title: "Flipkart GRiD 7.0",
+    host: "Flipkart",
+    location: "Online",
+    prize: "₹1,50,000",
+    dates: "July 2026",
+    startDate: "2026-07-15",
+    endDate: "2026-07-20",
     status: "Upcoming",
-    date: "June 2026",
-    mode: "Online",
-    participants: "2 Lakh+",
-    prizes: "₹5 Lakhs + Jobs",
-    tags: ["E-Commerce", "GenAI"],
-    gradient: "from-yellow-400 to-orange-500",
-    desc: "India's biggest engineering campus challenge.",
-    interestedUsers: [
-      {
-        name: "Arjun K.",
-        role: "Data Scientist",
-        img: "https://api.dicebear.com/7.x/avataaars/svg?seed=Arjun",
-      },
-      {
-        name: "Neha S.",
-        role: "Product",
-        img: "https://api.dicebear.com/7.x/avataaars/svg?seed=Neha",
-      },
-      {
-        name: "Rohan D.",
-        role: "DevOps",
-        img: "https://api.dicebear.com/7.x/avataaars/svg?seed=Rohan",
-      },
-      {
-        name: "Kavya L.",
-        role: "Mobile",
-        img: "https://api.dicebear.com/7.x/avataaars/svg?seed=Kavya",
-      },
-    ],
+    link: "https://unstop.com/",
+    description:
+      "Flipkart GRiD is our flagship engineering campus challenge. It provides you the opportunity to apply your technical knowledge to solve real world e-commerce problems. Winners get direct interviews for SDE roles!",
   },
-  // Add remaining items from previous code...
+  {
+    id: "m3",
+    title: "Google Solution Challenge",
+    host: "Google",
+    location: "Global",
+    prize: "$3,000",
+    dates: "Jan 2026",
+    startDate: "2026-01-10",
+    endDate: "2026-01-30",
+    status: "Live",
+    link: "https://developers.google.com/",
+    description:
+      "Build a solution to a local problem using Google technologies, in accordance with one or more of the United Nations 17 Sustainable Development Goals. The top 100 teams receive mentorship from Google experts.",
+  },
+  {
+    id: "m4",
+    title: "ETHIndia 2025",
+    host: "Devfolio",
+    location: "Bangalore",
+    prize: "$50,000",
+    dates: "Dec 2025",
+    startDate: "2025-12-04",
+    endDate: "2025-12-06",
+    status: "Upcoming",
+    link: "https://ethindia.co/",
+    description:
+      "Asia's biggest Ethereum hackathon. Join 2000+ builders for 3 days of hacking, learning, and networking. Whether you are a DeFi wizard or an NFT novice, there is a place for you here.",
+  },
 ];
 
-type HackathonStatus = "All" | "Live" | "Upcoming" | "Past";
-
-const HackathonPage = () => {
+export default function HackathonPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState<HackathonStatus>("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedHackathon, setSelectedHackathon] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("All");
 
-  const filteredHackathons = HACKATHONS.filter(
-    (h) =>
-      (activeTab === "All" || h.status === activeTab) &&
-      h.title.toLowerCase().includes(searchQuery.toLowerCase())
+  const [hackathons, setHackathons] = useState<Hackathon[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [usingBackup, setUsingBackup] = useState(false);
+
+  // --- STATE FOR THE POPUP WINDOW ---
+  const [selectedHackathon, setSelectedHackathon] = useState<Hackathon | null>(
+    null
   );
 
+  const fetchLiveHackathons = async () => {
+    setLoading(true);
+    setUsingBackup(false);
+    try {
+      const response = await fetch("https://kontests.net/api/v1/all");
+      if (!response.ok) throw new Error("API Failed");
+      const data: any[] = await response.json();
+
+      const relevantSites = [
+        "HackerEarth",
+        "HackerRank",
+        "LeetCode",
+        "CodeChef",
+        "AtCoder",
+      ];
+      const liveData: Hackathon[] = data
+        .filter((item) => relevantSites.includes(item.site))
+        .map((item, index) => {
+          const now = new Date();
+          const start = new Date(item.start_time);
+          const end = new Date(item.end_time);
+          const isLive = now >= start && now <= end;
+
+          return {
+            id: `api-${index}`,
+            title: item.name,
+            host: item.site,
+            location: "Online",
+            prize: "See Details",
+            dates: start.toLocaleDateString("en-IN", {
+              month: "short",
+              day: "numeric",
+            }),
+            startDate: item.start_time,
+            endDate: item.end_time,
+            status: isLive ? "Live" : "Upcoming",
+            link: item.url,
+            description: `Join the ${item.name} hosted by ${item.site}. This is a competitive programming contest open to participants worldwide. Test your algorithmic skills and climb the leaderboard!`,
+          };
+        });
+
+      if (liveData.length === 0) throw new Error("No data");
+      setHackathons(liveData);
+    } catch (err) {
+      setHackathons(BACKUP_HACKATHONS);
+      setUsingBackup(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveHackathons();
+  }, []);
+
+  const filteredHackathons = hackathons.filter((hack) => {
+    const matchesSearch =
+      hack.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      hack.host.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTab = activeTab === "All" || hack.status === activeTab;
+    return matchesSearch && matchesTab;
+  });
+
+  const getDuration = (start: string, end: string) => {
+    const s = new Date(start);
+    const e = new Date(end);
+    const diffTime = Math.abs(e.getTime() - s.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 1 ? `${diffDays} Days` : "24 Hours";
+  };
+
   return (
-    <div className="flex min-h-screen bg-background text-foreground font-sans relative">
+    <div className="flex h-screen bg-background text-foreground font-sans overflow-hidden">
       <DashboardSidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         onSearchClick={() => {}}
       />
 
-      <main className="flex-1 overflow-y-auto h-screen">
-        {/* Header */}
-        <div className="relative bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-border/50 p-8 md:p-12 text-white">
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-          <div className="max-w-6xl mx-auto relative z-10">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col md:flex-row md:items-center justify-between gap-6"
-            >
-              <div>
-                <h1 className="text-4xl md:text-5xl font-black mb-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
-                  Hackathon Arena
-                </h1>
-                <p className="text-slate-300 text-lg max-w-xl">
-                  Discover India's top coding battles. From SIH to Flipkart
-                  GRiD, find your stage to shine.
-                </p>
-              </div>
-            </motion.div>
+      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+        <div className="flex-1 overflow-y-auto p-6 md:p-8">
+          <div className="max-w-5xl mx-auto mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <h1 className="text-4xl font-extrabold mb-2 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+                Hackathon Arena
+              </h1>
+              <p className="text-muted-foreground text-lg">
+                Discover India's top coding battles.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {usingBackup && (
+                <Badge
+                  variant="destructive"
+                  className="bg-orange-500/10 text-orange-500 border-orange-500/20"
+                >
+                  Offline Mode
+                </Badge>
+              )}
+              <Button
+                onClick={fetchLiveHackathons}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <RefreshCw
+                  className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+                />
+                {loading ? "Syncing..." : "Refresh"}
+              </Button>
+            </div>
           </div>
-        </div>
 
-        {/* Content */}
-        <div className="max-w-6xl mx-auto p-6 md:p-8">
-          {/* Filters */}
-          <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 sticky top-0 z-10 bg-background/95 backdrop-blur-md py-4 border-b border-border/40">
-            <div className="flex bg-muted/50 p-1 rounded-full border border-border/50">
-              {["All", "Live", "Upcoming", "Past"].map((tab) => (
+          {usingBackup && !loading && (
+            <div className="max-w-5xl mx-auto mb-6">
+              <Alert className="bg-orange-500/5 border-orange-500/20 text-orange-600">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Live Feed Unavailable</AlertTitle>
+                <AlertDescription>
+                  Showing curated featured hackathons instead.
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+
+          <div className="max-w-5xl mx-auto flex flex-col md:flex-row gap-4 mb-8 sticky top-0 bg-background/95 backdrop-blur-sm z-10 py-4">
+            <div className="flex bg-muted/50 p-1 rounded-xl">
+              {["All", "Live", "Upcoming"].map((tab) => (
                 <button
                   key={tab}
-                  onClick={() => setActiveTab(tab as HackathonStatus)}
-                  className={`px-6 py-2 rounded-full text-sm font-medium transition-all ${
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${
                     activeTab === tab
-                      ? "bg-background text-primary shadow-sm"
+                      ? "bg-primary text-primary-foreground shadow-lg"
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
@@ -194,287 +260,221 @@ const HackathonPage = () => {
                 </button>
               ))}
             </div>
-            <div className="relative w-full md:w-80">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search hackathons..."
-                className="pl-10 rounded-full bg-muted/30 border-transparent focus:border-primary transition-all"
+                placeholder="Search events..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-muted/30 border-border/50 h-10 w-full md:w-80 ml-auto"
               />
             </div>
           </div>
 
-          {/* Grid */}
-          <motion.div
-            layout
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
-          >
-            <AnimatePresence mode="popLayout">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center h-64">
+              <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
+              <p className="text-muted-foreground animate-pulse">
+                Syncing hackathon data...
+              </p>
+            </div>
+          ) : (
+            <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredHackathons.map((hack) => (
-                <HackathonCard
+                <motion.div
                   key={hack.id}
-                  data={hack}
-                  onClick={() => setSelectedHackathon(hack)}
-                />
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ y: -5 }}
+                  className="group relative h-full"
+                >
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-r ${
+                      hack.status === "Live"
+                        ? "from-red-500 to-orange-500"
+                        : "from-blue-500 to-purple-500"
+                    } opacity-0 group-hover:opacity-10 rounded-2xl transition-opacity duration-300`}
+                  />
+
+                  <Card className="h-full bg-card border-border/50 overflow-hidden flex flex-col hover:border-primary/50 transition-colors">
+                    <div
+                      className={`h-2 w-full bg-gradient-to-r ${
+                        hack.status === "Live"
+                          ? "from-red-500 to-orange-500"
+                          : "from-blue-500 to-purple-500"
+                      }`}
+                    />
+
+                    <div className="p-6 flex-1 flex flex-col">
+                      <div className="flex justify-between items-start mb-4">
+                        <Badge
+                          variant="outline"
+                          className={`border-none px-2 py-1 uppercase text-[10px] tracking-wider font-bold ${
+                            hack.status === "Live"
+                              ? "bg-red-500/10 text-red-500"
+                              : "bg-blue-500/10 text-blue-500"
+                          }`}
+                        >
+                          {hack.status}
+                        </Badge>
+                        {hack.status === "Live" && (
+                          <span className="relative flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="mb-1 text-xs font-bold text-primary uppercase tracking-widest opacity-80">
+                        {hack.host}
+                      </div>
+
+                      <h3 className="text-lg font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors h-14">
+                        {hack.title}
+                      </h3>
+
+                      <div className="space-y-2 text-sm text-muted-foreground mb-6">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-gray-500" />
+                          {hack.location}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Trophy className="w-4 h-4 text-yellow-500" />
+                          <span className="truncate">{hack.prize}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-auto pt-4 border-t border-border/50 flex items-center justify-between">
+                        <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {hack.dates}
+                        </div>
+
+                        {/* --- CLICK TRIGGER FOR DETAILS --- */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1 text-primary hover:text-primary hover:bg-primary/10"
+                          onClick={() => setSelectedHackathon(hack)}
+                        >
+                          Details <ExternalLink className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                </motion.div>
               ))}
-            </AnimatePresence>
-          </motion.div>
+            </div>
+          )}
         </div>
       </main>
 
-      {/* --- DETAILS MODAL WITH SQUAD MATCHER --- */}
-      <AnimatePresence>
-        {selectedHackathon && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectedHackathon(null)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="relative w-full max-w-2xl bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-            >
-              {/* Modal Banner */}
-              <div
-                className={`h-40 bg-gradient-to-r ${selectedHackathon.gradient} p-8 flex items-end relative`}
-              >
-                <button
-                  onClick={() => setSelectedHackathon(null)}
-                  className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 rounded-full text-white transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-                <div>
-                  <Badge className="mb-3 bg-black/40 backdrop-blur-md border-none text-white hover:bg-black/50">
+      {/* --- THE DETAIL WINDOW BOX (MODAL) --- */}
+      <Dialog
+        open={!!selectedHackathon}
+        onOpenChange={() => setSelectedHackathon(null)}
+      >
+        <DialogContent className="sm:max-w-lg bg-card border-border shadow-2xl">
+          {selectedHackathon && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge
+                    variant="outline"
+                    className={`${
+                      selectedHackathon.status === "Live"
+                        ? "text-red-500 border-red-500/20 bg-red-500/10"
+                        : "text-blue-500 border-blue-500/20 bg-blue-500/10"
+                    }`}
+                  >
                     {selectedHackathon.status}
                   </Badge>
-                  <h2 className="text-3xl font-bold text-white shadow-sm">
-                    {selectedHackathon.title}
-                  </h2>
+                  <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                    {selectedHackathon.host}
+                  </span>
                 </div>
-              </div>
+                <DialogTitle className="text-2xl font-bold text-foreground leading-tight">
+                  {selectedHackathon.title}
+                </DialogTitle>
 
-              {/* Modal Body */}
-              <div className="p-8 overflow-y-auto">
-                {/* Key Info */}
-                <div className="grid grid-cols-2 gap-6 mb-8">
-                  <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                      Organizer
-                    </div>
-                    <div className="font-semibold">
-                      {selectedHackathon.organizer}
-                    </div>
+                {/* --- DESCRIPTION TEXT BOX --- */}
+                <div className="mt-4 p-4 rounded-xl bg-muted/30 border border-border/50 text-sm text-muted-foreground leading-relaxed">
+                  <div className="flex items-center gap-2 mb-2 text-primary font-semibold text-xs uppercase tracking-wider">
+                    <Info className="w-4 h-4" /> About Event
                   </div>
-                  <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                      Prize Pool
-                    </div>
-                    <div className="font-semibold text-primary">
-                      {selectedHackathon.prizes}
-                    </div>
+                  {selectedHackathon.description}
+                </div>
+              </DialogHeader>
+
+              <div className="grid grid-cols-2 gap-4 py-2">
+                <div className="p-3 rounded-lg bg-muted/50 border border-border/50 flex flex-col justify-center">
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <Clock className="w-3 h-3" /> Duration
                   </div>
-                  <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                      Mode
-                    </div>
-                    <div className="font-semibold flex items-center gap-2">
-                      <MapPin className="w-4 h-4" /> {selectedHackathon.mode}
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                      Dates
-                    </div>
-                    <div className="font-semibold flex items-center gap-2">
-                      <Clock className="w-4 h-4" /> {selectedHackathon.date}
-                    </div>
+                  <div className="font-semibold text-sm">
+                    {getDuration(
+                      selectedHackathon.startDate,
+                      selectedHackathon.endDate
+                    )}
                   </div>
                 </div>
 
-                {/* Description */}
-                <div className="mb-8">
-                  <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-purple-500" /> About Event
-                  </h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {selectedHackathon.desc}
-                  </p>
-                </div>
-
-                {/* --- NEW FEATURE: SQUAD MATCHER --- */}
-                <div className="mb-8 p-5 bg-secondary/30 rounded-xl border border-border">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-bold text-lg flex items-center gap-2">
-                      <Users className="w-5 h-5 text-blue-500" /> Looking for
-                      Team?
-                    </h3>
-                    <Badge variant="outline" className="text-xs">
-                      {selectedHackathon.interestedUsers?.length || 0} active
-                      users
-                    </Badge>
+                <div className="p-3 rounded-lg bg-muted/50 border border-border/50 flex flex-col justify-center">
+                  <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                    <Trophy className="w-3 h-3" /> Prize
                   </div>
-
-                  {selectedHackathon.interestedUsers &&
-                  selectedHackathon.interestedUsers.length > 0 ? (
-                    <div className="space-y-3">
-                      {selectedHackathon.interestedUsers.map(
-                        (user: any, idx: number) => (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-between bg-background p-3 rounded-lg border border-border/50"
-                          >
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={user.img} />
-                                <AvatarFallback>{user.name[0]}</AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="text-sm font-semibold">
-                                  {user.name}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {user.role}
-                                </div>
-                              </div>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 text-primary hover:text-primary hover:bg-primary/10"
-                            >
-                              <UserPlus className="w-4 h-4 mr-1" /> Connect
-                            </Button>
-                          </div>
-                        )
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-center py-4 text-muted-foreground text-sm">
-                      Be the first to look for a team here!
-                    </div>
-                  )}
-                  <Button
-                    className="w-full mt-4 bg-background border-dashed border-2 border-muted-foreground/20 hover:border-primary/50 hover:text-primary text-muted-foreground"
-                    variant="outline"
+                  <div
+                    className="font-semibold text-sm truncate"
+                    title={selectedHackathon.prize}
                   >
-                    + List me as looking for team
-                  </Button>
+                    {selectedHackathon.prize}
+                  </div>
                 </div>
 
-                {/* Tags */}
-                <div>
-                  <h3 className="font-bold text-lg mb-3">Tags</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedHackathon.tags.map((t: string) => (
-                      <Badge key={t} variant="secondary" className="px-3 py-1">
-                        {t}
-                      </Badge>
-                    ))}
+                <div className="p-3 rounded-lg bg-muted/50 border border-border/50 col-span-2 flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                      <Globe className="w-3 h-3" /> Location
+                    </div>
+                    <div className="font-semibold text-sm">
+                      {selectedHackathon.location}
+                    </div>
+                  </div>
+                  <div className="h-8 w-[1px] bg-border mx-4"></div>
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
+                      <Users className="w-3 h-3" /> Team Size
+                    </div>
+                    <div className="font-semibold text-sm">1 - 4 Members</div>
                   </div>
                 </div>
               </div>
 
-              {/* Modal Footer */}
-              <div className="p-6 border-t border-border bg-muted/20 flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => setSelectedHackathon(null)}
-                >
-                  Close
-                </Button>
-                <Button variant="outline" className="gap-2">
-                  <CalendarPlus className="w-4 h-4" /> Add to Calendar
-                </Button>
-                <Button className="bg-primary hover:bg-primary/90">
-                  Register Now <ExternalLink className="w-4 h-4 ml-2" />
-                </Button>
+              <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 mb-2">
+                <h4 className="text-sm font-bold flex items-center gap-2 mb-2 text-primary">
+                  <BookOpen className="w-4 h-4" /> Eligibility Criteria
+                </h4>
+                <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>Open to all engineering students.</li>
+                  <li>Must have a valid college ID card.</li>
+                  <li>Both individual and team participation allowed.</li>
+                </ul>
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+
+              <DialogFooter className="sm:justify-start">
+                <Button
+                  className="w-full gap-2 text-lg font-bold h-12"
+                  size="lg"
+                  onClick={() => window.open(selectedHackathon.link, "_blank")}
+                >
+                  Register Now <ExternalLink className="w-5 h-5" />
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
-};
-
-// --- CARD COMPONENT ---
-const HackathonCard = ({
-  data,
-  onClick,
-}: {
-  data: any;
-  onClick: () => void;
-}) => {
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      whileHover={{ y: -5 }}
-      onClick={onClick}
-      className="group relative bg-card border border-border rounded-2xl overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all cursor-pointer flex flex-col h-full"
-    >
-      <div
-        className={`h-32 bg-gradient-to-r ${data.gradient} relative overflow-hidden`}
-      >
-        <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-        <div className="absolute top-4 right-4">
-          {data.status === "Live" && (
-            <Badge className="bg-red-500/90 hover:bg-red-500 border-none animate-pulse">
-              Live
-            </Badge>
-          )}
-          {data.status === "Upcoming" && (
-            <Badge className="bg-blue-500/90 border-none">Upcoming</Badge>
-          )}
-          {data.status === "Past" && (
-            <Badge
-              variant="secondary"
-              className="bg-black/50 border-none text-white"
-            >
-              Closed
-            </Badge>
-          )}
-        </div>
-      </div>
-      <div className="p-5 flex flex-col flex-1">
-        <div className="mb-4">
-          <div className="text-xs text-primary font-bold tracking-wide uppercase mb-1 opacity-80">
-            {data.organizer}
-          </div>
-          <h3 className="text-xl font-bold leading-tight group-hover:text-primary transition-colors">
-            {data.title}
-          </h3>
-        </div>
-        <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground mb-6">
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-blue-400" /> {data.mode}
-          </div>
-          <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-yellow-400" /> {data.prizes}
-          </div>
-        </div>
-        <div className="mt-auto pt-4 border-t border-border flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">{data.date}</span>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="group-hover:translate-x-1 transition-transform p-0 hover:bg-transparent"
-          >
-            Details <ArrowRight className="w-4 h-4 ml-1" />
-          </Button>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
-export default HackathonPage;
+}
