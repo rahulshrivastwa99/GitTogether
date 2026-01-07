@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 // --- FIXED IMPORTS ---
+// Ensure these paths match where your files actually are
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { MatchesSidebar } from "@/components/MatchesSidebar";
 import { SwipeCard } from "@/components/SwipeCard";
@@ -28,16 +29,16 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-// --- IMPORT AUTH CONTEXT ---
 import { useAuth } from "@/context/AuthContext";
 
 // --- TYPES ---
 export interface UserProfile {
   id: string;
-  _id?: string; // MongoDB ID
+  _id?: string;
   name: string;
   role: string;
   bio: string;
+  techStack: string[];
   skills: string[];
   achievements: string[];
   avatarGradient: string;
@@ -61,7 +62,7 @@ const Dashboard = () => {
   const { userEmail, token } = useAuth();
   const navigate = useNavigate();
 
-  // Layout State
+  // --- LAYOUT STATE ---
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [matchesSidebarOpen, setMatchesSidebarOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState("All");
@@ -69,11 +70,9 @@ const Dashboard = () => {
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [isCampusFilterActive, setIsCampusFilterActive] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
-
-  // Animation State
   const [exitDirection, setExitDirection] = useState<"left" | "right">("right");
 
-  // Github State
+  // --- GITHUB STATE ---
   const [showGithubModal, setShowGithubModal] = useState(false);
   const [githubInput, setGithubInput] = useState("");
   const [githubStatus, setGithubStatus] = useState<
@@ -82,39 +81,35 @@ const Dashboard = () => {
   const [userAvatar, setUserAvatar] = useState("");
 
   // --- DATA STATE ---
-  const [allUsers, setAllUsers] = useState<UserProfile[]>([]); // Cache for filtering
-  const [users, setUsers] = useState<UserProfile[]>([]); // Displayed Deck
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [matches, setMatches] = useState<UserProfile[]>([]);
   const [sentRequests, setSentRequests] = useState<UserProfile[]>([]);
   const [receivedRequests, setReceivedRequests] = useState<UserProfile[]>([]);
   const [upcomingHackathons, setUpcomingHackathons] = useState<
     HackathonEvent[]
   >([]);
-
   const [loading, setLoading] = useState(true);
 
-  // Load Avatar preference
+  // --- 🔥 1. LOAD PROFILE (FIXES ANONYMOUS ISSUE) ---
+  // We read from localStorage because the Login API saved it there
+  const myProfile = {
+    name:
+      localStorage.getItem("userName") || userEmail?.split("@")[0] || "User",
+    role: localStorage.getItem("userRole") || "Developer",
+    college: localStorage.getItem("userCollege") || "Unknown College",
+    email: userEmail,
+    bio: "Ready to hack!",
+    techStack: ["React", "JavaScript", "Python"],
+    stats: { swipes: 42, matches: matches.length, karma: 950 },
+  };
+
   useEffect(() => {
     const savedAvatar = localStorage.getItem("userAvatar");
     if (savedAvatar) setUserAvatar(savedAvatar);
   }, []);
 
-  const myProfile = {
-    name: userEmail ? userEmail.split("@")[0] : "User",
-    email: userEmail || "guest@example.com",
-    role: "Full Stack Developer",
-    college: "BPIT, GGSIPU",
-    bio: "Passionate about building cool stuff.",
-    techStack: ["React", "JavaScript", "Python"],
-    stats: { swipes: 42, matches: matches.length, karma: 950 },
-  };
-
-  // --- 1. FETCH USERS (FROM BACKEND) ---
-  // Inside Dashboard.tsx
-
-  // Inside src/pages/Dashboard.tsx
-
-  // --- 1. FETCH USERS (WITH DATA TRANSFORMATION) ---
+  // --- 2. FETCH USERS (FEED) ---
   const fetchUsers = useCallback(async () => {
     if (!token) {
       setLoading(false);
@@ -123,33 +118,27 @@ const Dashboard = () => {
 
     try {
       setLoading(true);
-
       const response = await axios.get("http://localhost:5000/api/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // 🔥 CRITICAL FIX: Map Backend Data -> Frontend Interface
-      const mappedUsers: UserProfile[] = response.data.map((u: any) => ({
+      // 🔥 CRITICAL FIX: MAP DB DATA (skills) TO UI DATA (techStack)
+      const mappedUsers = response.data.map((u: any) => ({
         id: u._id, // Map MongoDB _id to id
-        name: u.name || "Anonymous Hacker", // Fallback if name is missing
+        name: u.name || "Anonymous Hacker",
         role: u.role || "Developer",
-        bio: u.bio || "Ready to code.",
         college: u.college || "Unknown College",
-
-        // Fix 1: Map 'skills' (DB) to 'techStack' (UI)
-        techStack: u.skills || [],
-
-        // Fix 2: Add default values for UI-only fields not in DB
+        bio: u.bio || "Ready to code.",
+        techStack: u.skills || [], // Fixes "join of undefined" crash
         achievements: [],
         avatarGradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
         stats: {
-          completionRate: 75, // Default mock stat
-          activityLevel: "Medium",
-          availability: 10,
+          completionRate: 80,
+          activityLevel: "High",
+          availability: 20,
         },
       }));
 
-      console.log("✅ Mapped Users:", mappedUsers);
       setAllUsers(mappedUsers);
       setUsers(mappedUsers);
     } catch (error) {
@@ -159,12 +148,41 @@ const Dashboard = () => {
     }
   }, [token]);
 
-  // Initial Fetch
+  // --- 3. FETCH MATCHES (SIDEBAR) ---
+  const fetchMatches = useCallback(async () => {
+    if (!token) return;
+    try {
+      // NOTE: Ensure your backend has the /api/matches route!
+      const response = await axios.get("http://localhost:5000/api/matches", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const mappedMatches = response.data.map((u: any) => ({
+        id: u._id,
+        name: u.name,
+        role: u.role,
+        college: u.college,
+        bio: u.bio,
+        techStack: u.skills || [],
+        avatarGradient:
+          u.avatarGradient ||
+          "linear-gradient(135deg, #FF6B6B 0%, #556270 100%)",
+      }));
+
+      setMatches(mappedMatches);
+    } catch (error) {
+      // Silent fail if route doesn't exist yet
+      console.log("Matches fetch skipped or failed");
+    }
+  }, [token]);
+
+  // Initial Data Load
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+    fetchMatches();
+  }, [fetchUsers, fetchMatches]);
 
-  // --- 2. FILTER LOGIC ---
+  // --- 4. FILTER LOGIC ---
   useEffect(() => {
     let filtered = allUsers;
 
@@ -173,35 +191,30 @@ const Dashboard = () => {
         const roleMatch = user.role
           ?.toLowerCase()
           .includes(activeFilter.toLowerCase());
-
-        const skillMatch = user.skills?.some((skill) =>
-          skill.toLowerCase().includes(activeFilter.toLowerCase())
+        const techMatch = user.techStack?.some((tech) =>
+          tech.toLowerCase().includes(activeFilter.toLowerCase())
         );
-
-        return roleMatch || skillMatch;
+        return roleMatch || techMatch;
       });
     }
 
     if (isCampusFilterActive) {
-      filtered = filtered.filter(
-        (user) =>
-          user.college?.toLowerCase().includes("bpit") ||
-          user.college?.toLowerCase().includes("ggsipu")
+      filtered = filtered.filter((user) =>
+        user.college?.toLowerCase().includes(myProfile.college.toLowerCase())
       );
     }
 
     setUsers(filtered);
-  }, [activeFilter, isCampusFilterActive, allUsers]);
+  }, [activeFilter, isCampusFilterActive, allUsers, myProfile.college]);
 
-  // --- 3. HANDLERS ---
-
+  // --- 5. SWIPE HANDLER ---
   const handleSwipe = async (direction: "left" | "right") => {
     setExitDirection(direction);
     const currentUser = users[0];
 
     if (!currentUser) return;
 
-    // Optimistic UI: Remove card immediately
+    // Optimistic UI Update
     setTimeout(() => {
       setUsers((prev) => prev.slice(1));
     }, 200);
@@ -209,11 +222,10 @@ const Dashboard = () => {
     if (direction === "left") return;
 
     try {
-      const targetId = currentUser.id || currentUser._id; // Handle both ID formats
       const res = await axios.post(
         "http://localhost:5000/api/swipe",
         {
-          targetUserId: targetId,
+          targetUserId: currentUser.id || currentUser._id,
           direction,
         },
         {
@@ -222,13 +234,9 @@ const Dashboard = () => {
       );
 
       if (res.data.match) {
-        // 🎉 MATCH FOUND
-        alert(
-          `🔥 IT'S A MATCH! You and ${currentUser.name} are now connected.`
-        );
+        alert(`🔥 IT'S A MATCH! You and ${currentUser.name} are connected.`);
         setMatches((prev) => [currentUser, ...prev]);
       } else {
-        // Request Sent
         setSentRequests((prev) => [...prev, currentUser]);
       }
     } catch (error) {
@@ -246,12 +254,11 @@ const Dashboard = () => {
   };
 
   const handleSelectUser = (userId: string) => {
-    // Find in allUsers so we can search everyone, not just filtered ones
     const selectedUser = allUsers.find(
       (u) => u.id === userId || u._id === userId
     );
     if (selectedUser) {
-      setUsers([selectedUser]); // Put them on top of the deck
+      setUsers([selectedUser]);
       setSearchOpen(false);
     }
   };
@@ -277,137 +284,51 @@ const Dashboard = () => {
   };
 
   const SidebarContent = () => (
-    <>
-      <Card
-        className="p-4 border-border/50 bg-card/50 hover:bg-card/80 transition-colors cursor-pointer group mb-6"
-        onClick={() => setShowProfileModal(true)}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10 border-2 border-primary/20">
-              <AvatarImage
-                src={
-                  userAvatar ||
-                  `https://api.dicebear.com/7.x/initials/svg?seed=${myProfile.name}`
-                }
-                className="object-cover"
-              />
-              <AvatarFallback>{myProfile.name[0]}</AvatarFallback>
-            </Avatar>
-            <div>
-              <h3 className="font-bold text-sm group-hover:text-primary transition-colors">
-                {myProfile.name}
-              </h3>
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                <MapPin className="w-3 h-3" />
-                <span className="truncate max-w-[120px]">
-                  {myProfile.college}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="p-2 bg-muted/50 rounded-lg">
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-              Requests
-            </div>
-            <div className="font-bold text-sm">
-              {receivedRequests.length + sentRequests.length}
-            </div>
-          </div>
-          <div className="p-2 bg-muted/50 rounded-lg">
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-              Matches
-            </div>
-            <div className="font-bold text-sm text-primary">
-              {matches.length}
-            </div>
-          </div>
-          <div className="p-2 bg-muted/50 rounded-lg">
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-              Karma
-            </div>
-            <div className="font-bold text-sm">{myProfile.stats.karma}</div>
-          </div>
-        </div>
-      </Card>
-
-      <div className="mb-6">
-        <div
-          onClick={() => navigate("/dashboard/hackathons")}
-          className="flex items-center justify-between mb-3 cursor-pointer group hover:bg-muted/50 p-2 -mx-2 rounded-lg transition-colors"
-        >
-          <h3 className="font-bold text-xs flex items-center gap-2 text-muted-foreground uppercase tracking-wider group-hover:text-primary transition-colors">
-            <Calendar className="w-3 h-3" /> Hackathon Radar
+    <Card className="p-4 border-border/50 bg-card/50 mb-6">
+      <div className="flex items-center gap-3 mb-4">
+        <Avatar className="h-10 w-10 border-2 border-primary/20">
+          <AvatarImage
+            src={
+              userAvatar ||
+              `https://api.dicebear.com/7.x/initials/svg?seed=${myProfile.name}`
+            }
+            className="object-cover"
+          />
+          <AvatarFallback>{myProfile.name[0]}</AvatarFallback>
+        </Avatar>
+        <div>
+          <h3 className="font-bold text-sm text-foreground">
+            {myProfile.name}
           </h3>
-          <ArrowRight className="w-3 h-3 text-primary opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
-        </div>
-
-        {upcomingHackathons.length === 0 ? (
-          <div className="text-xs text-muted-foreground p-2">
-            No upcoming hackathons loaded.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {upcomingHackathons.map((hack, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3 p-3 rounded-xl bg-muted/20 border border-transparent"
-              >
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center text-xs font-bold text-primary">
-                  {hack.date.split(" ")[1]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm truncate">
-                    {hack.name}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {hack.status}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="mt-auto p-4 rounded-xl bg-gradient-to-br from-purple-900/50 to-blue-900/50 border border-purple-500/20">
-        <div className="flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-purple-500/20 text-purple-300">
-            <Github className="w-5 h-5" />
-          </div>
-          <div className="flex-1">
-            <h4 className="font-bold text-sm text-purple-100 mb-1">
-              Boost Your Profile
-            </h4>
-            <p className="text-xs text-purple-200/70 mb-3">
-              Add a GitHub repo to get 3x more matches.
-            </p>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="w-full h-8 text-xs border-none"
-              onClick={() => {
-                if (githubStatus !== "connected") setShowGithubModal(true);
-              }}
-            >
-              {githubStatus === "loading" && (
-                <Loader2 className="w-3 h-3 animate-spin mr-2" />
-              )}
-              {githubStatus === "connected" && (
-                <Check className="w-3 h-3 mr-2" />
-              )}
-              {githubStatus === "idle"
-                ? "Connect GitHub"
-                : githubStatus === "loading"
-                ? "Connecting..."
-                : "Connected"}
-            </Button>
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+            <MapPin className="w-3 h-3" />
+            <span className="truncate max-w-[120px]">{myProfile.college}</span>
           </div>
         </div>
       </div>
-    </>
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="p-2 bg-muted/50 rounded-lg">
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+            Requests
+          </div>
+          <div className="font-bold text-sm">
+            {receivedRequests.length + sentRequests.length}
+          </div>
+        </div>
+        <div className="p-2 bg-muted/50 rounded-lg">
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+            Matches
+          </div>
+          <div className="font-bold text-sm text-primary">{matches.length}</div>
+        </div>
+        <div className="p-2 bg-muted/50 rounded-lg">
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+            Karma
+          </div>
+          <div className="font-bold text-sm">{myProfile.stats.karma}</div>
+        </div>
+      </div>
+    </Card>
   );
 
   return (
@@ -418,144 +339,129 @@ const Dashboard = () => {
         onSearchClick={() => setSearchOpen(true)}
       />
 
-      <main className="flex-1 flex overflow-hidden relative">
-        <div className="flex-1 flex flex-col h-full relative">
-          {/* HEADER */}
-          <div className="flex-shrink-0 p-6 z-10">
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
-              <div>
-                <h1 className="text-2xl font-bold flex items-center gap-2">
-                  Find Your Squad{" "}
-                  <Zap className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                </h1>
-                <p className="text-muted-foreground text-sm">
-                  Swipe right to connect.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setIsCampusFilterActive(!isCampusFilterActive)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all border ${
-                    isCampusFilterActive
-                      ? "bg-purple-500/20 border-purple-500/50 text-purple-300"
-                      : "bg-background border-border"
-                  }`}
-                >
-                  <MapPin className="w-4 h-4" />
-                  <span className="hidden sm:inline">
-                    {isCampusFilterActive ? "My Campus" : "All Locations"}
-                  </span>
-                </button>
-                <button
-                  onClick={() => setMatchesSidebarOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all border bg-background border-border relative"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span className="hidden sm:inline">Requests</span>
-                  {(receivedRequests.length > 0 || sentRequests.length > 0) && (
-                    <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-primary rounded-full border-2 border-background" />
-                  )}
-                </button>
-                <button
-                  onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-all border ${
-                    rightSidebarOpen
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background border-border"
-                  }`}
-                >
-                  {rightSidebarOpen ? (
-                    <PanelRightClose className="w-4 h-4" />
-                  ) : (
-                    <PanelRight className="w-4 h-4" />
-                  )}
-                  <span className="hidden md:inline">Widgets</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-full gap-2 border-dashed flex-shrink-0"
-              >
-                <Filter className="w-3 h-3" /> Filters
-              </Button>
-              {filters.map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setActiveFilter(f)}
-                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${
-                    activeFilter === f
-                      ? "bg-foreground text-background"
-                      : "bg-muted/50 text-muted-foreground"
-                  }`}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
+      <main className="flex-1 flex flex-col h-full relative">
+        {/* HEADER */}
+        <div className="p-6 z-10 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              Find Your Squad{" "}
+              <Zap className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Swipe right to connect.
+            </p>
           </div>
 
-          <div className="flex-1 flex flex-col items-center justify-center relative p-4 min-h-0">
-            <UserSearch
-              open={searchOpen}
-              onOpenChange={setSearchOpen}
-              users={allUsers}
-              onSelectUser={handleSelectUser}
-            />
-            <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
-              <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-            </div>
-
-            {loading ? (
-              <div className="flex flex-col items-center justify-center z-20">
-                <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-                <p className="text-muted-foreground">Finding teammates...</p>
-              </div>
-            ) : users.length > 0 ? (
-              <div className="flex flex-col items-center w-full max-w-[340px] h-full z-20">
-                <div className="relative w-full h-[500px] mb-6">
-                  <AnimatePresence mode="popLayout" custom={exitDirection}>
-                    {users
-                      .slice(0, 3)
-                      .map((user, index) => (
-                        <SwipeCard
-                          key={user.id || user._id}
-                          user={user}
-                          onSwipe={handleSwipe}
-                          isTop={index === 0}
-                          exitDirection={exitDirection}
-                        />
-                      ))
-                      .reverse()}
-                  </AnimatePresence>
-                </div>
-
-                <div className="flex-shrink-0">
-                  <SwipeControls
-                    onPass={() => handleSwipe("left")}
-                    onConnect={() => handleSwipe("right")}
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="text-center p-8 max-w-md z-20">
-                <h2 className="text-2xl font-bold mb-2">No profiles found!</h2>
-                <p className="text-muted-foreground mb-6">
-                  Try changing your filters or inviting more friends.
-                </p>
-                <Button onClick={fetchUsers} variant="outline">
-                  Refresh
-                </Button>
-              </div>
-            )}
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCampusFilterActive(!isCampusFilterActive)}
+              className={
+                isCampusFilterActive
+                  ? "bg-purple-500/20 text-purple-300 border-purple-500/50"
+                  : ""
+              }
+            >
+              <MapPin className="w-4 h-4 mr-2" />
+              {isCampusFilterActive ? "My Campus" : "All Locations"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setMatchesSidebarOpen(true)}
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Requests
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setRightSidebarOpen(!rightSidebarOpen)}
+            >
+              <PanelRight className="w-4 h-4" />
+            </Button>
           </div>
         </div>
 
-        {/* --- SLIDING SIDEBARS --- */}
+        {/* FILTERS */}
+        <div className="px-6 pb-2 overflow-x-auto flex gap-2 scrollbar-hide">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full border-dashed"
+          >
+            <Filter className="w-3 h-3 mr-2" /> Filters
+          </Button>
+          {filters.map((f) => (
+            <button
+              key={f}
+              onClick={() => setActiveFilter(f)}
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+                activeFilter === f
+                  ? "bg-foreground text-background"
+                  : "bg-muted/50 text-muted-foreground"
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        {/* MAIN DECK AREA */}
+        <div className="flex-1 flex flex-col items-center justify-center relative p-4 min-h-0">
+          <UserSearch
+            open={searchOpen}
+            onOpenChange={setSearchOpen}
+            users={allUsers}
+            onSelectUser={handleSelectUser}
+          />
+          <div className="absolute inset-0 pointer-events-none overflow-hidden select-none">
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+          </div>
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center z-20">
+              <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground">Finding teammates...</p>
+            </div>
+          ) : users.length > 0 ? (
+            <div className="flex flex-col items-center w-full max-w-[340px] h-full z-20">
+              <div className="relative w-full h-[500px] mb-6">
+                <AnimatePresence mode="popLayout" custom={exitDirection}>
+                  {users
+                    .slice(0, 3)
+                    .map((user, index) => (
+                      <SwipeCard
+                        key={user.id || user._id}
+                        user={user}
+                        onSwipe={handleSwipe}
+                        isTop={index === 0}
+                        exitDirection={exitDirection}
+                      />
+                    ))
+                    .reverse()}
+                </AnimatePresence>
+              </div>
+              <SwipeControls
+                onPass={() => handleSwipe("left")}
+                onConnect={() => handleSwipe("right")}
+              />
+            </div>
+          ) : (
+            <div className="text-center p-8 max-w-md z-20">
+              <h2 className="text-2xl font-bold mb-2">No profiles found!</h2>
+              <p className="text-muted-foreground mb-6">
+                Try changing your filters or inviting more friends.
+              </p>
+              <Button onClick={fetchUsers} variant="outline">
+                Refresh
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT SIDEBAR */}
         <AnimatePresence>
           {rightSidebarOpen && (
             <>
@@ -570,10 +476,9 @@ const Dashboard = () => {
                 initial={{ x: "100%" }}
                 animate={{ x: 0 }}
                 exit={{ x: "100%" }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="fixed right-0 top-0 h-full w-[400px] bg-background border-l border-border z-50 p-6 overflow-y-auto flex flex-col gap-6 shadow-2xl"
+                className="fixed right-0 top-0 h-full w-[350px] bg-background border-l border-border z-50 p-6 shadow-2xl overflow-y-auto"
               >
-                <div className="flex justify-between items-center mb-2">
+                <div className="flex justify-between items-center mb-6">
                   <h2 className="font-bold text-lg">Dashboard Widgets</h2>
                   <Button
                     variant="ghost"
@@ -584,6 +489,64 @@ const Dashboard = () => {
                   </Button>
                 </div>
                 <SidebarContent />
+
+                {/* Hackathons Widget */}
+                <div className="mb-6">
+                  <h3 className="font-bold text-xs flex items-center gap-2 text-muted-foreground uppercase tracking-wider mb-3">
+                    <Calendar className="w-3 h-3" /> Upcoming Hackathons
+                  </h3>
+                  {upcomingHackathons.length === 0 ? (
+                    <div className="text-xs text-muted-foreground p-2">
+                      No upcoming hackathons loaded.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {upcomingHackathons.map((hack, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-3 p-3 rounded-xl bg-muted/20"
+                        >
+                          <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-xs font-bold text-primary">
+                            {hack.date.split(" ")[1]}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-sm">
+                              {hack.name}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {hack.status}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* GitHub Boost Widget */}
+                <div className="mt-auto p-4 rounded-xl bg-gradient-to-br from-purple-900/50 to-blue-900/50 border border-purple-500/20">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-purple-500/20 text-purple-300">
+                      <Github className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-bold text-sm text-purple-100 mb-1">
+                        Boost Your Profile
+                      </h4>
+                      <p className="text-xs text-purple-200/70 mb-3">
+                        Add a GitHub repo to get 3x more matches.
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="w-full h-8 text-xs"
+                        onClick={() => setShowGithubModal(true)}
+                      >
+                        Connect GitHub
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </motion.aside>
             </>
           )}
@@ -600,61 +563,7 @@ const Dashboard = () => {
         onDecline={handleDeclineRequest}
       />
 
-      <AnimatePresence>
-        {showProfileModal && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowProfileModal(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              className="relative w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
-            >
-              <div className="h-24 bg-gradient-to-r from-primary to-purple-500/50" />
-              <div className="px-6 pb-6">
-                <div className="relative -mt-12 mb-4 flex justify-between items-end">
-                  <Avatar className="h-24 w-24 border-4 border-background bg-card">
-                    <AvatarImage
-                      src={
-                        userAvatar ||
-                        `https://api.dicebear.com/7.x/initials/svg?seed=${myProfile.name}`
-                      }
-                      className="object-cover"
-                    />
-                    <AvatarFallback>{myProfile.name[0]}</AvatarFallback>
-                  </Avatar>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full"
-                    onClick={() => {
-                      setShowProfileModal(false);
-                      navigate("/dashboard/settings");
-                    }}
-                  >
-                    Edit
-                  </Button>
-                </div>
-                <h2 className="text-2xl font-bold">{myProfile.name}</h2>
-                <p className="text-sm text-muted-foreground">{myProfile.bio}</p>
-              </div>
-              <button
-                onClick={() => setShowProfileModal(false)}
-                className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-black/40 rounded-full text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
+      {/* GITHUB MODAL */}
       <AnimatePresence>
         {showGithubModal && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
