@@ -7,7 +7,7 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 
 // Pages
 import Landing from "./pages/Landing";
-import AuthPage from "./pages/AuthPage";
+import AuthPage from "./pages/AuthPage"; // ✅ Restore this import
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import IdeaSpark from "./pages/IdeaSpark";
@@ -15,11 +15,12 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import HackathonPage from "./pages/HackathonPage";
 import CalendarPage from "./pages/CalendarPage";
-import TeamAnalysis from "./pages/TeamAnalysis"; // <--- IMPORT THIS
+import TeamAnalysis from "./pages/TeamAnalysis";
 import TeamAgreement from "./pages/TeamAgreement";
 
 const queryClient = new QueryClient();
 
+// ProtectedRoute: Only allows access if user has a Token
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   const { isAuthenticated } = useAuth();
   if (!isAuthenticated) {
@@ -37,9 +38,21 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/onboarding" element={<Onboarding />} />
 
+            {/* ✅ Step 1: Login / Signup */}
+            <Route path="/auth" element={<AuthPage />} />
+
+            {/* ✅ Step 2: Profile Setup (Must have token to access) */}
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute>
+                  <Onboarding />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* ✅ Step 3: Main Dashboard */}
             <Route
               path="/dashboard"
               element={
@@ -49,7 +62,7 @@ const App = () => (
               }
             />
 
-            {/* NEW TEAM BALANCE ROUTE */}
+            {/* Other Protected Routes */}
             <Route
               path="/dashboard/team-analysis"
               element={

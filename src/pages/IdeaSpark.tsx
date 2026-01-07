@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   Rocket,
 } from "lucide-react";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,8 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area"; // Ensure you have this or standard div
 
 // --- CONFIGURATION ---
-const API_KEY = "AIzaSyCqwBpf7ia7V62unQDkoF8OQf8gcD25E4s";
-const genAI = new GoogleGenerativeAI(API_KEY);
+const BACKEND_URL = "http://localhost:5000";
 
 // Updated Interface to include more details
 interface ProjectIdea {
@@ -103,47 +101,25 @@ const IdeaSpark = () => {
     setSelectedIdea(null);
 
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+      const response = await fetch(`${BACKEND_URL}/api/idea-spark`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          mySkills,
+          partnerSkills,
+        }),
+      });
 
-      // Updated Prompt to ask for long_desc and features
-      const prompt = `
-        Act as a hackathon mentor. 
-        My Skills: ${mySkills}. 
-        Partner's Skills: ${partnerSkills || "None"}.
-        
-        Generate 3 innovative, winning hackathon project ideas that combine these technologies.
-        
-        Strictly return ONLY a JSON array with this format (no markdown, no code blocks):
-        [
-          {
-            "title": "Project Name",
-            "desc": "1 sentence hook.",
-            "long_desc": "3-4 sentences explaining exactly how it works and the user flow.",
-            "features": ["Feature 1", "Feature 2", "Feature 3", "Feature 4"],
-            "stack": ["Tech 1", "Tech 2"],
-            "difficulty": "Beginner/Intermediate/Hard"
-          }
-        ]
-      `;
-
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-
-      console.log("Gemini Response:", text);
-
-      const cleanedText = text.replace(/json/g, "").replace(/```/g, "").trim();
-      const firstBracket = cleanedText.indexOf("[");
-      const lastBracket = cleanedText.lastIndexOf("]");
-
-      if (firstBracket !== -1 && lastBracket !== -1) {
-        const jsonString = cleanedText.substring(firstBracket, lastBracket + 1);
-        setIdeas(JSON.parse(jsonString));
-      } else {
-        throw new Error("Invalid JSON format");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const data = await response.json();
+      setIdeas(data.ideas);
     } catch (err: any) {
-      console.error("Gemini API Failed, switching to fallback:", err);
+      console.error("Backend API Failed, switching to fallback:", err);
       await new Promise((r) => setTimeout(r, 1000));
       setIdeas(MOCK_IDEAS);
       setUsedFallback(true);
@@ -228,7 +204,7 @@ const IdeaSpark = () => {
               {loading ? (
                 <>
                   <Loader2 className="w-5 h-5 mr-2 animate-spin" /> Asking
-                  Gemini...
+                  Backend...
                 </>
               ) : (
                 <>

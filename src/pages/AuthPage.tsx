@@ -5,9 +5,8 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import axios from "axios"; // 1. Axios Import kiya
+import axios from "axios";
 import { Sparkles, Mail, ArrowRight, Loader2, AlertCircle } from "lucide-react";
-import React, { createContext, useContext, useEffect } from "react";
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -15,11 +14,12 @@ export default function AuthPage() {
   const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
-    identifier: "", // Yeh backend ke 'email' field mein jayega
+    identifier: "", // Maps to 'email'
     password: "",
     name: "",
   });
 
+  // Get login function from our updated AuthContext
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -32,19 +32,27 @@ export default function AuthPage() {
       const API_URL = "http://localhost:5000/api";
 
       if (isLogin) {
-        // Login Request
+        // --- LOGIN LOGIC ---
         const response = await axios.post(`${API_URL}/login`, {
           email: formData.identifier,
           password: formData.password,
         });
 
-        // Response se token aur email nikal kar Context mein bhejें
-        const { token } = response.data;
-        login(formData.identifier, token);
+        const data = response.data;
 
-        navigate("/dashboard");
+        // 1. Update Context (Save Token + Onboarding Status)
+        // Ensure your AuthContext 'login' accepts 3 arguments now
+        login(data.token, data.user.email, data.user.isOnboarded);
+
+        // 2. Smart Redirection
+        if (data.user.isOnboarded) {
+          navigate("/dashboard");
+        } else {
+          // Force them to fill profile if they haven't yet
+          navigate("/onboarding");
+        }
       } else {
-        // Signup Request
+        // --- SIGNUP LOGIC ---
         await axios.post(`${API_URL}/signup`, {
           name: formData.name,
           email: formData.identifier,
@@ -52,9 +60,10 @@ export default function AuthPage() {
         });
 
         alert("Account created successfully! Please login.");
-        setIsLogin(true);
+        setIsLogin(true); // Switch to login view
       }
     } catch (err: any) {
+      console.error("Auth Error:", err);
       setError(
         err.response?.data?.message ||
           "Connection failed. Check if server is running."

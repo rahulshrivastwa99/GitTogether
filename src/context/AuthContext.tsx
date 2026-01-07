@@ -2,64 +2,77 @@ import {
   createContext,
   useContext,
   useState,
-  ReactNode,
   useEffect,
+  ReactNode,
 } from "react";
 
 interface AuthContextType {
-  isAuthenticated: boolean;
+  token: string | null;
   userEmail: string | null;
-  login: (email: string, token: string) => void; // Token accept karega
+  isOnboarded: boolean; // <--- NEW TRACKER
+  isAuthenticated: boolean;
+  login: (token: string, email: string, onboarded: boolean) => void;
   logout: () => void;
-  isLoading: boolean; // Initial check ke liye
+  completeOnboarding: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [token, setToken] = useState<string | null>(
+    localStorage.getItem("token")
+  );
+  const [userEmail, setUserEmail] = useState<string | null>(
+    localStorage.getItem("userEmail")
+  );
+  // Check localStorage for onboarding status, default to false
+  const [isOnboarded, setIsOnboarded] = useState<boolean>(
+    localStorage.getItem("isOnboarded") === "true"
+  );
 
-  // Check login status on page load
-  useEffect(() => {
-    const savedToken = localStorage.getItem("token");
-    const savedEmail = localStorage.getItem("userEmail");
+  const login = (newToken: string, email: string, onboarded: boolean) => {
+    localStorage.setItem("token", newToken);
+    localStorage.setItem("userEmail", email);
+    localStorage.setItem("isOnboarded", String(onboarded));
 
-    if (savedToken && savedEmail) {
-      setIsAuthenticated(true);
-      setUserEmail(savedEmail);
-    }
-    setIsLoading(false);
-  }, []);
-
-  const login = (email: string, token: string) => {
-    localStorage.setItem("token", token); // Token save karein
-    localStorage.setItem("userEmail", email); // Email save karein
-    setIsAuthenticated(true);
+    setToken(newToken);
     setUserEmail(email);
+    setIsOnboarded(onboarded);
   };
 
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("userEmail");
-    setIsAuthenticated(false);
+    localStorage.removeItem("isOnboarded");
+    setToken(null);
     setUserEmail(null);
+    setIsOnboarded(false);
+  };
+
+  const completeOnboarding = () => {
+    setIsOnboarded(true);
+    localStorage.setItem("isOnboarded", "true");
   };
 
   return (
     <AuthContext.Provider
-      value={{ isAuthenticated, userEmail, login, logout, isLoading }}
+      value={{
+        token,
+        userEmail,
+        isOnboarded,
+        isAuthenticated: !!token,
+        login,
+        logout,
+        completeOnboarding,
+      }}
     >
-      {!isLoading && children}
+      {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
-}
+};

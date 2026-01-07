@@ -5,22 +5,32 @@ import {
   ArrowRight,
   ArrowLeft,
   Check,
-  Mail,
-  Lock,
   User,
   GraduationCap,
   Loader2,
-  AlertCircle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+
+// --- IMPORTS ---
 import { Navbar } from "@/components/Navbar";
 import { ModeCard } from "@/components/ModeCard";
 import { TechTag } from "@/components/TechTag";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/context/AuthContext"; // Import Auth Logic
+import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+// --- CONFIGURATION ---
+const BACKEND_URL = "http://localhost:5000";
 
 const techOptions = [
   "React",
@@ -63,70 +73,86 @@ const modes = [
 
 const Onboarding = () => {
   const navigate = useNavigate();
-  const { login } = useAuth(); // Use the login function from context
+  const { token, completeOnboarding } = useAuth(); // 🔥 Using Auth Context
 
-  const [step, setStep] = useState(1); // Now Step 1 is Auth
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
   const [selectedTech, setSelectedTech] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
-  // --- AUTH STATE ---
-  const [isLogin, setIsLogin] = useState(false); // Default to Signup for onboarding
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState("");
-  const [authData, setAuthData] = useState({
-    email: "",
-    password: "",
+  // --- PROFILE DATA STATE (Captured in Step 1) ---
+  const [profileData, setProfileData] = useState({
     name: "",
+    college: "",
+    bio: "",
+    role: "Frontend", // Default value
   });
 
+  // Toggle Tech Stack Selection
   const handleTechToggle = (tech: string) => {
     setSelectedTech((prev) =>
       prev.includes(tech) ? prev.filter((t) => t !== tech) : [...prev, tech]
     );
   };
 
-  // --- VALIDATION LOGIC ---
+  // Validation Logic
   const canProceed = () => {
-    if (step === 1) return false; // Handled by the Form Submit, not the "Continue" button
-    if (step === 2) return true; // Resume is optional/skippable
+    if (step === 1)
+      return profileData.name.length > 0 && profileData.college.length > 0;
+    if (step === 2) return true; // Resume is optional
     if (step === 3) return selectedMode !== null;
     if (step === 4) return selectedTech.length > 0;
     return false;
   };
 
-  // --- AUTH SUBMIT HANDLER (Step 1) ---
-  const handleAuthSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError("");
-    setAuthLoading(true);
-
-    // Simulate Network Call
-    setTimeout(() => {
-      // 1. Validation
-      if (!authData.email.endsWith(".edu")) {
-        setAuthError("Please use a valid .edu college email.");
-        setAuthLoading(false);
-        return;
-      }
-      if (authData.password.length < 6) {
-        setAuthError("Password must be at least 6 characters.");
-        setAuthLoading(false);
+  // --- FINAL SUBMIT: SAVES TO DATABASE ---
+  const handleProfileSubmit = async () => {
+    setLoading(true);
+    try {
+      if (!token) {
+        alert("Error: User not logged in.");
         return;
       }
 
-      // 2. Success
-      login(authData.email); // Set global auth state
-      setAuthLoading(false);
-      setStep(2); // Move to Resume Step
-    }, 1500);
+      // 🔥 Sending Data to Backend to replace "Anonymous"
+      const response = await fetch(`${BACKEND_URL}/api/onboarding`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: profileData.name,
+          college: profileData.college,
+          bio: profileData.bio,
+          role: profileData.role,
+          mode: selectedMode || "Chill",
+          skills: selectedTech,
+          github: "",
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to save profile");
+
+      // ✅ Update Context so App knows we are onboarded
+      completeOnboarding();
+
+      // ✅ Redirect to Dashboard
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Failed to save profile:", error);
+      alert("Failed to save profile. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleNext = () => {
     if (step < 4) {
       setStep(step + 1);
     } else {
-      navigate("/dashboard");
+      handleProfileSubmit();
     }
   };
 
@@ -141,7 +167,7 @@ const Onboarding = () => {
       <Navbar />
 
       <div className="container mx-auto px-4 pt-24 pb-12">
-        {/* Progress bar (Now 4 Steps) */}
+        {/* Progress bar */}
         <div className="max-w-xl mx-auto mb-12">
           <div className="flex items-center justify-between mb-4">
             {[1, 2, 3, 4].map((s) => (
@@ -160,7 +186,6 @@ const Onboarding = () => {
               </div>
             ))}
           </div>
-          {/* Progress Line */}
           <div className="h-1 bg-secondary rounded-full overflow-hidden relative">
             <motion.div
               className="h-full bg-primary"
@@ -172,7 +197,7 @@ const Onboarding = () => {
         </div>
 
         <AnimatePresence mode="wait">
-          {/* === STEP 1: AUTHENTICATION (Login/Signup) === */}
+          {/* === STEP 1: BASIC DETAILS === */}
           {step === 1 && (
             <motion.div
               key="step1"
@@ -183,118 +208,84 @@ const Onboarding = () => {
             >
               <div className="text-center mb-8">
                 <h1 className="text-3xl font-bold text-foreground mb-2">
-                  {isLogin ? "Welcome Back" : "Create Account"}
+                  Tell Us About You
                 </h1>
                 <p className="text-muted-foreground">
-                  Use your university email to verify your student status.
+                  Build your hacker identity.
                 </p>
               </div>
 
-              <div className="bg-card border border-border rounded-2xl p-6 shadow-lg">
-                <form onSubmit={handleAuthSubmit} className="space-y-4">
-                  {/* Name (Signup Only) */}
-                  {!isLogin && (
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="name"
-                          placeholder="John Doe"
-                          className="pl-9"
-                          value={authData.name}
-                          onChange={(e) =>
-                            setAuthData({ ...authData, name: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Email */}
-                  <div className="space-y-2">
-                    <Label htmlFor="email">College Email (.edu)</Label>
-                    <div className="relative">
-                      <GraduationCap className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="student@university.edu"
-                        className="pl-9"
-                        value={authData.email}
-                        onChange={(e) =>
-                          setAuthData({ ...authData, email: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
+              <div className="bg-card border border-border rounded-2xl p-6 shadow-lg space-y-4">
+                <div className="space-y-2">
+                  <Label>Full Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="John Doe"
+                      className="pl-9"
+                      value={profileData.name}
+                      onChange={(e) =>
+                        setProfileData({ ...profileData, name: e.target.value })
+                      }
+                    />
                   </div>
+                </div>
 
-                  {/* Password */}
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="password"
-                        type="password"
-                        placeholder="••••••••"
-                        className="pl-9"
-                        value={authData.password}
-                        onChange={(e) =>
-                          setAuthData({ ...authData, password: e.target.value })
-                        }
-                        required
-                      />
-                    </div>
+                <div className="space-y-2">
+                  <Label>College / University</Label>
+                  <div className="relative">
+                    <GraduationCap className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="BPIT, GGSIPU..."
+                      className="pl-9"
+                      value={profileData.college}
+                      onChange={(e) =>
+                        setProfileData({
+                          ...profileData,
+                          college: e.target.value,
+                        })
+                      }
+                    />
                   </div>
+                </div>
 
-                  {/* Error Message */}
-                  {authError && (
-                    <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 p-3 rounded-lg">
-                      <AlertCircle className="w-4 h-4" />
-                      {authError}
-                    </div>
-                  )}
-
-                  <Button
-                    type="submit"
-                    className="w-full h-11 text-base"
-                    disabled={authLoading}
+                <div className="space-y-2">
+                  <Label>Primary Role</Label>
+                  <Select
+                    defaultValue={profileData.role}
+                    onValueChange={(val) =>
+                      setProfileData({ ...profileData, role: val })
+                    }
                   >
-                    {authLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : isLogin ? (
-                      "Login"
-                    ) : (
-                      "Create Account"
-                    )}
-                  </Button>
-                </form>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Frontend">Frontend Dev</SelectItem>
+                      <SelectItem value="Backend">Backend Dev</SelectItem>
+                      <SelectItem value="FullStack">Full Stack</SelectItem>
+                      <SelectItem value="AI/ML">AI / ML Engineer</SelectItem>
+                      <SelectItem value="Design">UI/UX Designer</SelectItem>
+                      <SelectItem value="Product">Product Manager</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-                <div className="mt-6 text-center text-sm">
-                  <span className="text-muted-foreground">
-                    {isLogin
-                      ? "Don't have an account? "
-                      : "Already have an account? "}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsLogin(!isLogin);
-                      setAuthError("");
-                    }}
-                    className="text-primary font-medium hover:underline"
-                  >
-                    {isLogin ? "Sign up" : "Login"}
-                  </button>
+                <div className="space-y-2">
+                  <Label>Short Bio</Label>
+                  <Textarea
+                    placeholder="I love building scalable systems..."
+                    value={profileData.bio}
+                    onChange={(e) =>
+                      setProfileData({ ...profileData, bio: e.target.value })
+                    }
+                  />
                 </div>
               </div>
             </motion.div>
           )}
 
-          {/* === STEP 2: RESUME UPLOAD === */}
+          {/* === STEP 2: RESUME UPLOAD (Optional) === */}
           {step === 2 && (
             <motion.div
               key="step2"
@@ -308,7 +299,7 @@ const Onboarding = () => {
                   Upload Your Resume
                 </h1>
                 <p className="text-muted-foreground">
-                  We'll use AI to create your perfect hacker profile
+                  Optional: Let AI extract your skills automatically.
                 </p>
               </div>
 
@@ -339,15 +330,11 @@ const Onboarding = () => {
                 </button>
               </motion.div>
 
-              <p className="text-center text-sm text-muted-foreground mt-4">
-                Don't have a resume?{" "}
-                <button
-                  onClick={() => setStep(3)}
-                  className="text-primary hover:underline"
-                >
-                  Skip for now
-                </button>
-              </p>
+              <div className="text-center mt-6">
+                <Button variant="ghost" onClick={() => setStep(3)}>
+                  Skip for now <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
             </motion.div>
           )}
 
@@ -429,36 +416,43 @@ const Onboarding = () => {
         </AnimatePresence>
 
         {/* --- NAVIGATION BUTTONS --- */}
-        {/* Only show "Back" and "Continue" for steps AFTER Auth */}
-        {step > 1 && (
-          <div className="max-w-xl mx-auto mt-12 flex items-center justify-between">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleBack}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-foreground hover:bg-muted transition-all"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              Back
-            </motion.button>
+        <div className="max-w-xl mx-auto mt-12 flex items-center justify-between">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleBack}
+            disabled={step === 1}
+            className={cn(
+              "flex items-center gap-2 px-6 py-3 rounded-xl font-medium text-foreground transition-all",
+              step === 1 ? "opacity-0 pointer-events-none" : "hover:bg-muted"
+            )}
+          >
+            <ArrowLeft className="w-5 h-5" />
+            Back
+          </motion.button>
 
-            <motion.button
-              whileHover={{ scale: canProceed() ? 1.05 : 1 }}
-              whileTap={{ scale: canProceed() ? 0.95 : 1 }}
-              onClick={handleNext}
-              disabled={!canProceed()}
-              className={cn(
-                "flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all",
-                canProceed()
-                  ? "gradient-primary text-primary-foreground glow-primary"
-                  : "bg-muted text-muted-foreground cursor-not-allowed"
-              )}
-            >
-              {step === 4 ? "Start Matching" : "Continue"}
-              <ArrowRight className="w-5 h-5" />
-            </motion.button>
-          </div>
-        )}
+          <motion.button
+            whileHover={{ scale: canProceed() ? 1.05 : 1 }}
+            whileTap={{ scale: canProceed() ? 0.95 : 1 }}
+            onClick={handleNext}
+            disabled={!canProceed() || loading}
+            className={cn(
+              "flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all",
+              canProceed()
+                ? "gradient-primary text-primary-foreground glow-primary"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
+            )}
+          >
+            {loading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : step === 4 ? (
+              "Start Matching"
+            ) : (
+              "Continue"
+            )}
+            {!loading && <ArrowRight className="w-5 h-5" />}
+          </motion.button>
+        </div>
       </div>
     </div>
   );
