@@ -29,7 +29,11 @@ const userSchema = new mongoose.Schema({
   bio: { type: String },
   github: { type: String },
   mode: { type: String, default: "Chill" },
-  isOnboarded: { type: Boolean, default: false }, // <--- This defaults to FALSE
+  isOnboarded: { type: Boolean, default: false },
+
+  // 🔥 FIX: Added avatarGradient field
+  avatarGradient: { type: String },
+
   swipedRight: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   matches: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 });
@@ -37,8 +41,6 @@ const userSchema = new mongoose.Schema({
 const User = mongoose.model("User", userSchema);
 
 // -------------------- AUTH MIDDLEWARE --------------------
-// -------------------- AUTH MIDDLEWARE (DEBUG VERSION) --------------------
-// -------------------- AUTH MIDDLEWARE (DEBUG VERSION) --------------------
 const verifyToken = (req, res, next) => {
   console.log(`\n🛡️ [Middleware] Request: ${req.method} ${req.url}`);
 
@@ -57,7 +59,6 @@ const verifyToken = (req, res, next) => {
   }
 
   try {
-    // Check if secret exists
     if (!process.env.JWT_SECRET) {
       console.error("🔥 CRITICAL ERROR: process.env.JWT_SECRET is missing!");
       throw new Error("Server misconfiguration");
@@ -69,7 +70,6 @@ const verifyToken = (req, res, next) => {
     next();
   } catch (err) {
     console.log("❌ [Middleware] Verification Failed:", err.message);
-    // This prints "jwt expired" or "invalid signature"
     res.status(403).json({ message: "Invalid token" });
   }
 };
@@ -79,14 +79,26 @@ const verifyToken = (req, res, next) => {
 // 1. SIGNUP
 app.post("/api/signup", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, name } = req.body;
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: "User exists" });
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const newUser = new User({ email, password: hashedPassword });
+
+    // 🔥 FIX: Added default name and random gradient
+    const newUser = new User({
+      email,
+      password: hashedPassword,
+      name: name || "User",
+      avatarGradient: `linear-gradient(135deg, #${Math.floor(
+        Math.random() * 16777215
+      ).toString(16)} 0%, #${Math.floor(Math.random() * 16777215).toString(
+        16
+      )} 100%)`,
+    });
+
     await newUser.save();
-    console.log("✅ New User Created:", email); // Log creation
+    console.log("✅ New User Created:", email);
     res.status(201).json({ message: "User created" });
   } catch (error) {
     res.status(500).json({ message: "Error creating user" });
@@ -94,7 +106,6 @@ app.post("/api/signup", async (req, res) => {
 });
 
 // 2. LOGIN
-// 2. LOGIN (Updated to send full profile)
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -117,11 +128,12 @@ app.post("/api/login", async (req, res) => {
         id: user._id,
         email: user.email,
         isOnboarded: user.isOnboarded,
-        // 🔥 ADDED THESE FIELDS:
         name: user.name,
         college: user.college,
         role: user.role,
         bio: user.bio,
+        // 🔥 FIX: Return avatarGradient
+        avatarGradient: user.avatarGradient,
       },
       message: "Login successful",
     });
@@ -146,24 +158,20 @@ app.post("/api/onboarding", verifyToken, async (req, res) => {
 });
 console.log("✅ Onboarding route set up");
 
-// 4. GET USERS FEED (🔥 DEBUG FIX APPLIED HERE)
+// 4. GET USERS FEED
 app.get("/api/users", verifyToken, async (req, res) => {
   console.log("🔍 Fetching users for dashboard...");
   try {
     const myId = req.user.id;
+    const currentUser = await User.findById(myId);
 
-    // 🔥 DEBUG LOGS: Check what is actually in your database
     const totalUsers = await User.countDocuments();
-    const onboardedUsers = await User.countDocuments({ isOnboarded: true });
-    console.log(
-      `📊 DB STATS: Total Users: ${totalUsers} | Fully Onboarded: ${onboardedUsers}`
-    );
-    console.log(`👤 Requesting User ID: ${myId}`);
+    console.log(`📊 DB STATS: Total Users: ${totalUsers}`);
 
-    // 🔥 THE FIX: We commented out 'isOnboarded: true' so you can see EVERYONE
+    // 🔥 FIX: Exclude users I have ALREADY swiped right on
     const users = await User.find({
-      _id: { $ne: myId }, // Still hide myself
-      // isOnboarded: true, // <--- DISABLED THIS FILTER
+      _id: { $ne: myId, $nin: currentUser.swipedRight },
+      // isOnboarded: true, // Uncomment for production
     }).limit(20);
 
     console.log(`🚀 Sending ${users.length} users to Dashboard`);
@@ -174,29 +182,63 @@ app.get("/api/users", verifyToken, async (req, res) => {
   }
 });
 
-// 5. SWIPE ACTION
+// 5. SWIPE ACTION (🔥 FIXED MATCH LOGIC)
 app.post("/api/swipe", verifyToken, async (req, res) => {
   try {
     const { targetUserId, direction } = req.body;
     const currentUserId = req.user.id;
 
+    if (direction === "left") return res.json({ match: false });
+
     if (direction === "right") {
       const currentUser = await User.findById(currentUserId);
       const targetUser = await User.findById(targetUserId);
 
+      // 1. Record the Swipe
       if (!currentUser.swipedRight.includes(targetUserId)) {
         currentUser.swipedRight.push(targetUserId);
         await currentUser.save();
       }
 
+      // 2. Check for Match
       if (targetUser.swipedRight.includes(currentUserId)) {
+        // 🔥 FIX: Update BOTH users' matches array
+        if (!currentUser.matches.includes(targetUserId)) {
+          currentUser.matches.push(targetUserId);
+          await currentUser.save();
+        }
+        if (!targetUser.matches.includes(currentUserId)) {
+          targetUser.matches.push(currentUserId);
+          await targetUser.save();
+        }
+
         res.json({ match: true });
         return;
       }
     }
     res.json({ match: false });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Swipe failed" });
+  }
+});
+
+// 7. GET MY MATCHES
+app.get("/api/matches", verifyToken, async (req, res) => {
+  try {
+    const currentUser = await User.findById(req.user.id).populate(
+      "matches",
+      "name college role bio skills avatarGradient"
+    );
+
+    if (!currentUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json(currentUser.matches);
+  } catch (error) {
+    console.error("Fetch Matches Error:", error);
+    res.status(500).json({ message: "Failed to fetch matches" });
   }
 });
 
