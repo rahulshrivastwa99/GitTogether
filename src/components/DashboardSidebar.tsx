@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import {
   Users,
-  Calculator,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -9,8 +8,10 @@ import {
   Lightbulb,
   Trophy,
   CalendarDays,
+  FileText, // For Team Contract
+  BarChart3, // For Team Balance
 } from "lucide-react";
-import { NavLink } from "@/components/NavLink"; // Ensure you have this component, or use react-router-dom
+import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
 
 interface DashboardSidebarProps {
@@ -19,16 +20,14 @@ interface DashboardSidebarProps {
   onSearchClick: () => void;
 }
 
+// --- NAVIGATION ITEMS ---
 const navItems = [
   { icon: Users, label: "Matches", path: "/dashboard" },
+  { icon: BarChart3, label: "Team Balance", path: "/dashboard/team-analysis" }, // <--- FEATURE ADDED HERE
   { icon: Trophy, label: "Hackathons", path: "/dashboard/hackathons" },
+  { icon: FileText, label: "Team Contract", path: "/dashboard/contract" },
   { icon: CalendarDays, label: "Calendar", path: "/dashboard/calendar" },
   { icon: Lightbulb, label: "Idea Spark", path: "/dashboard/ideas" },
-  {
-    icon: Calculator,
-    label: "Equity Calculator",
-    path: "/dashboard/calculator",
-  },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];
 
@@ -51,7 +50,7 @@ export const DashboardSidebar = ({
         collapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Header with Logo */}
+      {/* HEADER WITH LOGO */}
       <div className="h-16 border-b border-border flex items-center justify-between px-4">
         {!collapsed && (
           <div className="flex items-center gap-2">
@@ -77,9 +76,8 @@ export const DashboardSidebar = ({
         </button>
       </div>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 p-3 space-y-1">
-        {/* Matches Button (First Item) */}
+      {/* NAVIGATION LINKS */}
+      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {navItems.slice(0, 1).map((item) => (
           <NavLink
             key={item.path}
@@ -93,13 +91,11 @@ export const DashboardSidebar = ({
           </NavLink>
         ))}
 
-        {/* Search Button (Middle) */}
         <button onClick={onSearchClick} className={itemClasses}>
           <Search className="w-5 h-5 flex-shrink-0 group-hover:text-primary transition-colors" />
           {!collapsed && <span className="font-medium">Search</span>}
         </button>
 
-        {/* Rest of the Links */}
         {navItems.slice(1).map((item) => (
           <NavLink
             key={item.path}

@@ -40,304 +40,270 @@ export interface UserProfile {
   achievements: string[];
   avatarGradient: string;
   college: string;
+  stats: {
+    completionRate: number;
+    activityLevel: "High" | "Medium" | "Low";
+    availability: number;
+  };
 }
 
-// --- MOCK DATA (20 Profiles with Indian Names) ---
+// --- FULL MOCK DATA (20 Profiles) ---
 const mockUsers: UserProfile[] = [
   {
     id: "1",
     name: "Aarav Patel",
     role: "Frontend Architect",
     college: "BPIT, GGSIPU",
-    bio: "Obsessed with pixel-perfect UI and smooth animations. I dream in CSS and GSAP. Looking for a backend wizard.",
-    techStack: ["React", "TypeScript", "Tailwind", "Framer Motion", "Next.js"],
-    achievements: [
-      "Winner of Smart India Hackathon 2023",
-      "Maintained a repo with 500+ stars",
-      "Built a portfolio featured on Awwwards",
-    ],
+    bio: "Obsessed with pixel-perfect UI. I dream in CSS. Looking for a backend wizard.",
+    techStack: ["React", "TypeScript", "Tailwind", "Next.js"],
+    achievements: ["Winner of Smart India Hackathon 2023"],
     avatarGradient: "linear-gradient(135deg, #FF6B6B 0%, #556270 100%)",
+    stats: { completionRate: 95, activityLevel: "High", availability: 20 },
   },
   {
     id: "2",
     name: "Diya Sharma",
     role: "AI/ML Researcher",
     college: "IIT Delhi",
-    bio: "Turning data into decisions. Currently working on LLMs for healthcare. Need a team to productize my research.",
-    techStack: ["Python", "PyTorch", "TensorFlow", "FastAPI", "Docker"],
-    achievements: [
-      "Published paper at ICCV 2024",
-      "Kaggle Grandmaster (Top 1%)",
-      "Developed a COVID-19 detection model",
-    ],
+    bio: "Turning data into decisions. Currently working on LLMs for healthcare.",
+    techStack: ["Python", "PyTorch", "TensorFlow", "FastAPI"],
+    achievements: ["Published paper at ICCV 2024"],
     avatarGradient: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+    stats: { completionRate: 70, activityLevel: "Medium", availability: 10 },
   },
   {
     id: "3",
     name: "Vihaan Gupta",
     role: "Full Stack Ninja",
     college: "BPIT, GGSIPU",
-    bio: "Jack of all trades, master of shipping fast. I love hackathons and caffeine. Let's build something crazy.",
-    techStack: ["MERN", "Redis", "AWS", "GraphQL", "Solidity"],
-    achievements: [
-      "Won 1st prize at ETHIndia 2024",
-      "Google Summer of Code (GSoC) 2023 Graduate",
-      "Built a crypto wallet with 10k+ users",
-    ],
+    bio: "Jack of all trades, master of shipping fast. I love hackathons.",
+    techStack: ["MERN", "Redis", "AWS", "GraphQL"],
+    achievements: ["Won 1st prize at ETHIndia 2024"],
     avatarGradient: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+    stats: { completionRate: 40, activityLevel: "Low", availability: 5 },
   },
   {
     id: "4",
     name: "Ananya Singh",
     role: "UI/UX Designer",
     college: "DTU",
-    bio: "I make complex systems look simple. Believer in 'User First'. Looking for devs who appreciate good design.",
-    techStack: ["Figma", "Adobe XD", "Spline", "CSS", "Storybook"],
-    achievements: [
-      "Top rated freelancer on Upwork",
-      "Designed app interface for a YC-backed startup",
-      "Adobe Creative Jam Winner",
-    ],
+    bio: "I make complex systems look simple. Believer in 'User First'.",
+    techStack: ["Figma", "Adobe XD", "Spline", "CSS"],
+    achievements: ["Top rated freelancer"],
     avatarGradient: "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+    stats: { completionRate: 88, activityLevel: "High", availability: 15 },
   },
   {
     id: "5",
     name: "Rohan Malhotra",
     role: "DevOps Engineer",
     college: "BPIT, GGSIPU",
-    bio: "If it works on my machine, it will work on yours. I automate everything. Let's make sure our project never crashes.",
-    techStack: ["Kubernetes", "Docker", "Jenkins", "Go", "Terraform"],
-    achievements: [
-      "Certified Kubernetes Administrator (CKA)",
-      "Reduced server costs by 40%",
-      "Built a CI/CD pipeline serving 1M requests/day",
-    ],
+    bio: "If it works on my machine, it will work on yours. I automate everything.",
+    techStack: ["Kubernetes", "Docker", "Go", "Terraform"],
+    achievements: ["Certified Kubernetes Administrator"],
     avatarGradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    stats: { completionRate: 92, activityLevel: "High", availability: 25 },
   },
   {
     id: "6",
     name: "Ishita Verma",
     role: "Blockchain Developer",
     college: "NSUT",
-    bio: "Decentralizing the web one smart contract at a time. Rust enthusiast. Building a DAO for student communities.",
-    techStack: ["Solidity", "Rust", "Web3.js", "Hardhat", "Ether.js"],
-    achievements: [
-      "Polkadot Hackathon Finalist",
-      "Audited smart contracts holding $50k+",
-      "Core contributor to a DeFi protocol",
-    ],
+    bio: "Decentralizing the web. Rust enthusiast building DAOs.",
+    techStack: ["Solidity", "Rust", "Web3.js", "Hardhat"],
+    achievements: ["Polkadot Hackathon Finalist"],
     avatarGradient: "linear-gradient(135deg, #30cfd0 0%, #330867 100%)",
+    stats: { completionRate: 60, activityLevel: "Medium", availability: 8 },
   },
   {
     id: "7",
     name: "Aditya Kumar",
     role: "Mobile Developer",
     college: "IIIT Hyderabad",
-    bio: "Flutter fanatic. I build apps that feel native on both iOS and Android. Let's win the 'Best Mobile App' category.",
-    techStack: ["Flutter", "Dart", "Firebase", "Kotlin", "Swift"],
-    achievements: [
-      "App featured on Play Store 'App of the Week'",
-      "100k+ downloads on personal app",
-      "HackHarvard 2023 Track Winner",
-    ],
+    bio: "Flutter fanatic. I build apps that feel native on both iOS and Android.",
+    techStack: ["Flutter", "Dart", "Firebase", "Kotlin"],
+    achievements: ["App featured on Play Store"],
     avatarGradient: "linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)",
+    stats: { completionRate: 30, activityLevel: "Low", availability: 4 },
   },
   {
     id: "8",
     name: "Kavya Iyer",
     role: "Data Scientist",
     college: "BITS Pilani",
-    bio: "I find stories in numbers. Expert in visualization and predictive modeling. Looking for a backend dev.",
-    techStack: ["Pandas", "Scikit-learn", "Tableau", "SQL", "R"],
-    achievements: [
-      "Gold Medalist in National Data Science Challenge",
-      "Predictive model improved sales by 15%",
-      "Mentor at Girls Who Code",
-    ],
-    avatarGradient:
-      "linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%)",
+    bio: "I find stories in numbers. Expert in visualization and predictive modeling.",
+    techStack: ["Pandas", "Scikit-learn", "Tableau", "SQL"],
+    achievements: ["Gold Medalist in Data Challenge"],
+    avatarGradient: "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)",
+    stats: { completionRate: 85, activityLevel: "High", availability: 18 },
   },
   {
     id: "9",
     name: "Arjun Reddy",
     role: "Cybersecurity Analyst",
     college: "NIT Trichy",
-    bio: "White hat hacker. I break things so we can fix them. Will ensure our project is secure from day one.",
-    techStack: ["Kali Linux", "Wireshark", "Python", "Bash", "PenTesting"],
-    achievements: [
-      "Found a critical bug in a major fintech app",
-      "CTF Regional Champion",
-      "Certified Ethical Hacker (CEH)",
-    ],
+    bio: "White hat hacker. I break things so we can fix them.",
+    techStack: ["Kali Linux", "Wireshark", "Python", "Bash"],
+    achievements: ["CTF Regional Champion"],
     avatarGradient: "linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)",
+    stats: { completionRate: 75, activityLevel: "Medium", availability: 12 },
   },
   {
     id: "10",
     name: "Meera Nair",
-    role: "Product Manager / Dev",
+    role: "Product Manager",
     college: "IIM Bangalore",
-    bio: "Code + Business. I keep the team on track and the pitch deck looking sharp. I code a bit too (React).",
-    techStack: ["Jira", "React", "Analytics", "Notion", "Python"],
-    achievements: [
-      "Led a student club of 200+ members",
-      "Winner of 'Best Pitch' at Shark Tank College Edition",
-      "Interned at Flipkart as APM",
-    ],
+    bio: "Code + Business. I keep the team on track and the pitch deck looking sharp.",
+    techStack: ["Jira", "React", "Analytics", "Notion"],
+    achievements: ["Best Pitch at Shark Tank College"],
     avatarGradient: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
+    stats: { completionRate: 98, activityLevel: "High", availability: 30 },
   },
   {
     id: "11",
     name: "Siddharth Joshi",
     role: "Game Developer",
     college: "Manipal University",
-    bio: "Building immersive worlds. Unity and Unreal expert. Want to gamify education or health?",
-    techStack: ["Unity", "C#", "Blender", "WebGL", "Three.js"],
-    achievements: [
-      "Game Jam Winner (Ludum Dare)",
-      "Published an indie game on Steam",
-      "Created a VR tour for university campus",
-    ],
+    bio: "Building immersive worlds. Unity and Unreal expert.",
+    techStack: ["Unity", "C#", "Blender", "WebGL"],
+    achievements: ["Published game on Steam"],
     avatarGradient: "linear-gradient(135deg, #d299c2 0%, #fef9d7 100%)",
+    stats: { completionRate: 55, activityLevel: "Medium", availability: 10 },
   },
   {
     id: "12",
     name: "Zara Khan",
     role: "Cloud Architect",
     college: "Jamia Millia Islamia",
-    bio: "Scalability is my middle name. AWS Community Builder. I design systems that handle traffic spikes without sweating.",
-    techStack: ["AWS Lambda", "DynamoDB", "Serverless", "Azure", "Node.js"],
-    achievements: [
-      "AWS Community Builder Award",
-      "Architected a system handling 500 req/sec",
-      "Speaker at Cloud Community Day",
-    ],
+    bio: "Scalability is my middle name. AWS Community Builder.",
+    techStack: ["AWS", "Serverless", "Azure", "Node.js"],
+    achievements: ["AWS Community Builder Award"],
     avatarGradient: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
+    stats: { completionRate: 90, activityLevel: "High", availability: 22 },
   },
   {
     id: "13",
     name: "Kabir Singh",
     role: "Backend Heavy Lifter",
-    college: "Punjab Engineering College",
-    bio: "Rustacean. I care about memory safety and concurrency. Your frontend needs a robust API? I got you.",
-    techStack: ["Rust", "Actix", "PostgreSQL", "Redis", "gRPC"],
-    achievements: [
-      "Contributed to the Rust compiler",
-      "Built a custom database engine for fun",
-      "Ranked 1st in University Coding Contest",
-    ],
+    college: "PEC",
+    bio: "Rustacean. I care about memory safety and concurrency.",
+    techStack: ["Rust", "Actix", "PostgreSQL", "Redis"],
+    achievements: ["Contributed to Rust compiler"],
     avatarGradient: "linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)",
+    stats: { completionRate: 35, activityLevel: "Low", availability: 6 },
   },
   {
     id: "14",
     name: "Nikhil Chopra",
     role: "IoT Innovator",
     college: "Thapar University",
-    bio: "Connecting hardware to the cloud. Arduino, Raspberry Pi, and ESP32 are my toys. Let's build smart tech.",
-    techStack: ["C++", "MQTT", "Arduino", "Python", "Azure IoT"],
-    achievements: [
-      "Built a smart irrigation system for local farmers",
-      "Winner of Hardware Hackathon 2023",
-      "Patent pending for a wearable device",
-    ],
+    bio: "Connecting hardware to the cloud. Arduino & Pi enthusiast.",
+    techStack: ["C++", "MQTT", "Arduino", "Python"],
+    achievements: ["Winner of Hardware Hackathon"],
     avatarGradient: "linear-gradient(135deg, #fff1eb 0%, #ace0f9 100%)",
+    stats: { completionRate: 65, activityLevel: "Medium", availability: 14 },
   },
   {
     id: "15",
     name: "Riya Kapoor",
-    role: "QA Automation Engineer",
+    role: "QA Engineer",
     college: "Amity University",
-    bio: "I hate bugs more than I love coffee. Selenium and Cypress expert. I ensure we ship quality code.",
-    techStack: ["Selenium", "Cypress", "Java", "JUnit", "Jenkins"],
-    achievements: [
-      "Automated 90% of manual tests for a non-profit",
-      "Found 50+ bugs in beta testing for a startup",
-      "Wrote a viral blog on 'Testing in Production'",
-    ],
+    bio: "I hate bugs more than I love coffee. Selenium expert.",
+    techStack: ["Selenium", "Cypress", "Java", "JUnit"],
+    achievements: ["Found 50+ bugs in beta"],
     avatarGradient: "linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)",
+    stats: { completionRate: 94, activityLevel: "High", availability: 20 },
   },
   {
     id: "16",
     name: "Vikram Sethi",
     role: "AR/VR Developer",
     college: "SRM University",
-    bio: "Merging physical and digital worlds. Experience with Meta Quest and Apple Vision Pro dev. Let's build the metaverse.",
-    techStack: ["Unity", "C#", "WebXR", "A-Frame", "Three.js"],
-    achievements: [
-      "Created an AR history tour app used by local museums",
-      "Hackathon winner for 'Best Use of AR'",
-      "Published VR game on SideQuest",
-    ],
+    bio: "Merging physical and digital worlds with Meta Quest.",
+    techStack: ["Unity", "C#", "WebXR", "Three.js"],
+    achievements: ["Hackathon winner for Best AR"],
     avatarGradient: "linear-gradient(135deg, #42e695 0%, #3bb2b8 100%)",
+    stats: { completionRate: 50, activityLevel: "Medium", availability: 8 },
   },
   {
     id: "17",
     name: "Sana Mir",
     role: "Fintech Specialist",
     college: "Kashmir University",
-    bio: "Building the future of finance. Expert in secure transaction systems and banking APIs. Looking for a UI dev.",
-    techStack: ["Java", "Spring Boot", "Kafka", "Oracle", "Microservices"],
-    achievements: [
-      "Built a UPI payment gateway integration",
-      "Interned at a major investment bank",
-      "Winner of FinTech Innovation Challenge",
-    ],
+    bio: "Building the future of finance. Secure transactions & APIs.",
+    techStack: ["Java", "Spring Boot", "Kafka", "Oracle"],
+    achievements: ["Built UPI payment gateway"],
     avatarGradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+    stats: { completionRate: 89, activityLevel: "High", availability: 25 },
   },
   {
     id: "18",
     name: "Rahul Verma",
-    role: "System Administrator",
+    role: "SysAdmin",
     college: "VIT Vellore",
-    bio: "Linux is my home. Bash scripting wizard. I ensure 99.99% uptime. Need a dev to build the frontend.",
-    techStack: ["Linux", "Bash", "Ansible", "Nginx", "Prometheus"],
-    achievements: [
-      "Managed server infrastructure for a college fest",
-      "Open source contributor",
-      "Red Hat Certified Engineer",
-    ],
+    bio: "Linux is my home. I ensure 99.99% uptime.",
+    techStack: ["Linux", "Bash", "Ansible", "Nginx"],
+    achievements: ["Red Hat Certified Engineer"],
     avatarGradient: "linear-gradient(135deg, #5ee7df 0%, #b490ca 100%)",
+    stats: { completionRate: 20, activityLevel: "Low", availability: 2 },
   },
   {
     id: "19",
     name: "Priya Das",
-    role: "Frontend Developer",
+    role: "Frontend Dev",
     college: "Jadavpur University",
-    bio: "Creative coder. I love Vue.js and Svelte. Animations and micro-interactions are my jam.",
-    techStack: ["Vue.js", "Svelte", "JavaScript", "GSAP", "Nuxt"],
-    achievements: [
-      "Created a CSS art gallery with 10k views",
-      "Speaker at local Vue.js meetup",
-      "Won 'Best UI' at State Level Hackathon",
-    ],
+    bio: "Creative coder. I love Vue.js and Svelte animations.",
+    techStack: ["Vue.js", "Svelte", "GSAP", "Nuxt"],
+    achievements: ["Won Best UI at State Hackathon"],
     avatarGradient: "linear-gradient(135deg, #c3cfe2 0%, #c3cfe2 100%)",
+    stats: { completionRate: 72, activityLevel: "Medium", availability: 12 },
   },
   {
     id: "20",
     name: "Amit Shah",
     role: "Backend Architect",
-    college: "Gujarat Technological University",
-    bio: "Scalable Java systems are my forte. Experience with high-frequency trading platforms. Let's build something robust.",
-    techStack: ["Java", "Spring", "Hibernate", "Redis", "MySQL"],
-    achievements: [
-      "Optimized database queries reducing load time by 60%",
-      "Built a stock trading simulator",
-      "Oracle Certified Professional",
-    ],
+    college: "GTU",
+    bio: "Scalable Java systems are my forte.",
+    techStack: ["Java", "Spring", "Hibernate", "MySQL"],
+    achievements: ["Oracle Certified Professional"],
     avatarGradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    stats: { completionRate: 96, activityLevel: "High", availability: 28 },
   },
 ];
 
-const mockMatches = [
-  { id: "m1", name: "Rohan Malhotra", role: "DevOps Engineer", online: true },
+// --- MOCK INCOMING REQUESTS ---
+const initialReceivedRequests: UserProfile[] = [
+  {
+    id: "req1",
+    name: "Priya Das",
+    role: "Frontend Developer",
+    college: "Jadavpur University",
+    bio: "Creative coder. I love Vue.js and Svelte.",
+    techStack: ["Vue.js", "Svelte", "GSAP"],
+    achievements: ["Best UI at State Hackathon"],
+    avatarGradient: "linear-gradient(135deg, #c3cfe2 0%, #c3cfe2 100%)",
+    stats: { completionRate: 72, activityLevel: "Medium", availability: 12 },
+  },
+  {
+    id: "req2",
+    name: "Amit Shah",
+    role: "Backend Architect",
+    college: "GTU",
+    bio: "Scalable Java systems are my forte.",
+    techStack: ["Java", "Spring", "Hibernate"],
+    achievements: ["Oracle Certified"],
+    avatarGradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    stats: { completionRate: 96, activityLevel: "High", availability: 28 },
+  },
 ];
-
-const filters = ["All", "Frontend", "Backend", "AI/ML", "Design", "Web3"];
 
 const upcomingHackathons = [
   { name: "Smart India Hackathon", date: "Nov 15", status: "Registering" },
   { name: "HackMIT 2025", date: "Dec 02", status: "Soon" },
   { name: "ETHGlobal Online", date: "Dec 10", status: "Open" },
 ];
+
+const filters = ["All", "Frontend", "Backend", "AI/ML", "Design", "Web3"];
 
 const Dashboard = () => {
   const { userEmail } = useAuth();
@@ -363,8 +329,13 @@ const Dashboard = () => {
   >("idle");
   const [userAvatar, setUserAvatar] = useState("");
 
+  // --- MATCHING STATE ---
   const [users, setUsers] = useState<UserProfile[]>(mockUsers);
-  const [matches] = useState(mockMatches);
+  const [matches, setMatches] = useState<UserProfile[]>([]);
+  const [sentRequests, setSentRequests] = useState<UserProfile[]>([]);
+  const [receivedRequests, setReceivedRequests] = useState<UserProfile[]>(
+    initialReceivedRequests
+  );
 
   useEffect(() => {
     const savedAvatar = localStorage.getItem("userAvatar");
@@ -400,15 +371,37 @@ const Dashboard = () => {
     setUsers(filtered);
   }, [activeFilter, isCampusFilterActive]);
 
-  // --- UPDATED SWIPE HANDLER WITH DELAY ---
+  // --- 1. SWIPE HANDLER (SENDING REQUESTS) ---
   const handleSwipe = (direction: "left" | "right") => {
-    setExitDirection(direction); // 1. Update state first
+    setExitDirection(direction);
 
-    // 2. Wait 200ms for state to propagate before unmounting card
-    // This allows the card to read the NEW exitDirection value
+    // Get the user being swiped on
+    const currentUser = users[0];
+
     setTimeout(() => {
-      if (users.length > 0) setUsers((prev) => prev.slice(1));
+      if (users.length > 0) {
+        // Remove from stack
+        setUsers((prev) => prev.slice(1));
+
+        // LOGIC: If swiped right, add to Sent Requests
+        if (direction === "right" && currentUser) {
+          setSentRequests((prev) => [currentUser, ...prev]);
+        }
+      }
     }, 200);
+  };
+
+  // --- 2. ACCEPT REQUEST HANDLER ---
+  const handleAcceptRequest = (user: UserProfile) => {
+    // Add to Matches
+    setMatches((prev) => [user, ...prev]);
+    // Remove from Received Requests
+    setReceivedRequests((prev) => prev.filter((u) => u.id !== user.id));
+  };
+
+  // --- 3. DECLINE REQUEST HANDLER ---
+  const handleDeclineRequest = (userId: string) => {
+    setReceivedRequests((prev) => prev.filter((u) => u.id !== userId));
   };
 
   const handleSelectUser = (userId: string) => {
@@ -472,9 +465,11 @@ const Dashboard = () => {
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="p-2 bg-muted/50 rounded-lg">
             <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-              Swipes
+              Requests
             </div>
-            <div className="font-bold text-sm">{myProfile.stats.swipes}</div>
+            <div className="font-bold text-sm">
+              {receivedRequests.length + sentRequests.length}
+            </div>
           </div>
           <div className="p-2 bg-muted/50 rounded-lg">
             <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
@@ -573,6 +568,7 @@ const Dashboard = () => {
 
       <main className="flex-1 flex overflow-hidden relative">
         <div className="flex-1 flex flex-col h-full relative">
+          {/* HEADER */}
           <div className="flex-shrink-0 p-6 z-10">
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-4">
               <div>
@@ -604,8 +600,9 @@ const Dashboard = () => {
                   className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all border bg-background border-border relative"
                 >
                   <MessageCircle className="w-4 h-4" />
-                  <span className="hidden sm:inline">Matches</span>
-                  {matches.length > 0 && (
+                  <span className="hidden sm:inline">Requests</span>
+                  {/* Badge for new requests */}
+                  {(receivedRequests.length > 0 || sentRequests.length > 0) && (
                     <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-primary rounded-full border-2 border-background" />
                   )}
                 </button>
@@ -664,7 +661,6 @@ const Dashboard = () => {
 
             {users.length > 0 ? (
               <div className="flex flex-col items-center w-full max-w-[340px] h-full z-20">
-                {/* CARD CONTAINER */}
                 <div className="relative w-full h-[500px] mb-6">
                   <AnimatePresence mode="popLayout" custom={exitDirection}>
                     {users
@@ -675,14 +671,13 @@ const Dashboard = () => {
                           user={user}
                           onSwipe={handleSwipe}
                           isTop={index === 0}
-                          exitDirection={exitDirection} // Pass direction prop
+                          exitDirection={exitDirection}
                         />
                       ))
                       .reverse()}
                   </AnimatePresence>
                 </div>
 
-                {/* CONTROLS */}
                 <div className="flex-shrink-0">
                   <SwipeControls
                     onPass={() => handleSwipe("left")}
@@ -701,6 +696,7 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* --- SLIDING SIDEBARS --- */}
         <AnimatePresence>
           {rightSidebarOpen && (
             <>
@@ -735,14 +731,18 @@ const Dashboard = () => {
         </AnimatePresence>
       </main>
 
+      {/* --- MATCHES & REQUESTS SIDEBAR --- */}
       <MatchesSidebar
         matches={matches}
+        receivedRequests={receivedRequests}
+        sentRequests={sentRequests}
         isOpen={matchesSidebarOpen}
         onClose={() => setMatchesSidebarOpen(false)}
-        icebreaker="Ask about their favorite tech stack!"
+        onAccept={handleAcceptRequest}
+        onDecline={handleDeclineRequest}
       />
 
-      {/* Modals remain the same... */}
+      {/* Profile Modal */}
       <AnimatePresence>
         {showProfileModal && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -798,6 +798,7 @@ const Dashboard = () => {
         )}
       </AnimatePresence>
 
+      {/* Github Modal */}
       <AnimatePresence>
         {showGithubModal && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">

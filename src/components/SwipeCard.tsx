@@ -2,14 +2,16 @@ import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { TechTag } from "./TechTag";
+import { RiskBadge } from "./RiskBadge"; // <--- IMPORT THIS
 
 // UPDATED INTERFACE
 export interface UserProfile {
@@ -20,6 +22,12 @@ export interface UserProfile {
   techStack: string[];
   achievements: string[];
   avatarGradient: string;
+  // --- NEW STATS FIELDS ---
+  stats: {
+    completionRate: number; // 0-100
+    activityLevel: "High" | "Medium" | "Low";
+    availability: number; // Hours/week
+  };
 }
 
 interface SwipeCardProps {
@@ -29,7 +37,7 @@ interface SwipeCardProps {
   exitDirection?: "left" | "right";
 }
 
-// ANIMATION VARIANTS
+// Animation Variants
 const cardVariants = {
   hidden: { scale: 0.95, opacity: 0 },
   visible: {
@@ -43,7 +51,7 @@ const cardVariants = {
     x: direction === "right" ? 1000 : -1000,
     rotate: direction === "right" ? 20 : -20,
     opacity: 0,
-    transition: { duration: 0.4, ease: "easeInOut" }, // Slower, smoother exit
+    transition: { duration: 0.4, ease: "easeInOut" },
   }),
 };
 
@@ -90,7 +98,7 @@ export const SwipeCard = ({
       initial="hidden"
       animate="visible"
       exit="exit"
-      custom={exitDirection} // Passes direction to 'exit' variant
+      custom={exitDirection}
     >
       {/* Swipe Indicators */}
       {isTop && (
@@ -126,6 +134,15 @@ export const SwipeCard = ({
               👤
             </span>
           </div>
+
+          {/* --- NEW: RISK INDICATOR ON CARD IMAGE --- */}
+          <div className="absolute bottom-4 right-4">
+            <RiskBadge
+              completionRate={user.stats.completionRate}
+              activityLevel={user.stats.activityLevel}
+              availability={user.stats.availability}
+            />
+          </div>
         </div>
 
         <div className="p-5 space-y-3 flex flex-col flex-1">
@@ -144,8 +161,18 @@ export const SwipeCard = ({
                 <DialogTitle className="text-3xl font-bold text-primary flex items-center gap-3">
                   <span className="text-4xl">👤</span> {user.name}
                 </DialogTitle>
-                <DialogDescription className="text-lg">
-                  {user.role}
+                <div className="flex items-center gap-3 mt-2">
+                  <div className="text-lg">{user.role}</div>
+                  {/* --- NEW: RISK INDICATOR IN MODAL --- */}
+                  <RiskBadge
+                    completionRate={user.stats.completionRate}
+                    activityLevel={user.stats.activityLevel}
+                    availability={user.stats.availability}
+                  />
+                </div>
+                <DialogDescription className="text-sm text-muted-foreground mt-1">
+                  Risk Score calculated based on Git activity and past project
+                  completion.
                 </DialogDescription>
               </DialogHeader>
 
