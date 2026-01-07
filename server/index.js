@@ -94,6 +94,7 @@ app.post("/api/signup", async (req, res) => {
 });
 
 // 2. LOGIN
+// 2. LOGIN (Updated to send full profile)
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -109,9 +110,19 @@ app.post("/api/login", async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "24h" }
     );
+
     res.status(200).json({
       token,
-      user: { id: user._id, email: user.email },
+      user: {
+        id: user._id,
+        email: user.email,
+        isOnboarded: user.isOnboarded,
+        // 🔥 ADDED THESE FIELDS:
+        name: user.name,
+        college: user.college,
+        role: user.role,
+        bio: user.bio,
+      },
       message: "Login successful",
     });
   } catch (error) {
