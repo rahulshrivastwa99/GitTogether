@@ -7,16 +7,16 @@ import { AuthProvider, useAuth } from "@/context/AuthContext";
 
 // Pages
 import Landing from "./pages/Landing";
-import AuthPage from "./pages/AuthPage"; // ✅ Restore this import
+import AuthPage from "./pages/AuthPage";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import IdeaSpark from "./pages/IdeaSpark";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import HackathonPage from "./pages/HackathonPage";
-import CalendarPage from "./pages/CalendarPage";
 import TeamAnalysis from "./pages/TeamAnalysis";
 import TeamAgreement from "./pages/TeamAgreement";
+import MyCalendar from "./pages/MyCalendar"; // ✅ ADDED
 
 console.log("API BASE URL:", import.meta.env.VITE_API_BASE_URL);
 
@@ -30,7 +30,6 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   }
   return children;
 };
-// console.log("API BASE URL:", import.meta.env.VITE_API_BASE_URL);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -42,10 +41,10 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
 
-            {/* ✅ Step 1: Login / Signup */}
+            {/* Auth */}
             <Route path="/auth" element={<AuthPage />} />
 
-            {/* ✅ Step 2: Profile Setup (Must have token to access) */}
+            {/* Onboarding */}
             <Route
               path="/onboarding"
               element={
@@ -55,7 +54,7 @@ const App = () => (
               }
             />
 
-            {/* ✅ Step 3: Main Dashboard */}
+            {/* Dashboard */}
             <Route
               path="/dashboard"
               element={
@@ -65,7 +64,7 @@ const App = () => (
               }
             />
 
-            {/* Other Protected Routes */}
+            {/* Dashboard Sub Routes */}
             <Route
               path="/dashboard/team-analysis"
               element={
@@ -83,14 +82,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/dashboard/calendar"
-              element={
-                <ProtectedRoute>
-                  <CalendarPage />
-                </ProtectedRoute>
-              }
-            />
+
             <Route
               path="/dashboard/hackathons"
               element={
@@ -99,6 +91,17 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+
+            {/* ✅ MY CALENDAR ROUTE (ONLY ADDITION) */}
+            <Route
+              path="/dashboard/calendar"
+              element={
+                <ProtectedRoute>
+                  <MyCalendar />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path="/dashboard/ideas"
               element={
@@ -107,6 +110,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+
             <Route
               path="/dashboard/settings"
               element={

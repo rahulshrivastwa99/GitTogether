@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom"; // 1. Import useNavigate
 import {
   Search,
   MapPin,
@@ -14,6 +15,7 @@ import {
   Users,
   BookOpen,
   Info,
+  CalendarDays, // 2. Import Calendar icon for the button
 } from "lucide-react";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { Input } from "@/components/ui/input";
@@ -26,11 +28,10 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 
-// --- 1. UPDATED INTERFACE (Added Description) ---
+// --- INTERFACE ---
 interface Hackathon {
   id: string;
   title: string;
@@ -42,10 +43,10 @@ interface Hackathon {
   endDate: string;
   status: "Live" | "Upcoming";
   link: string;
-  description: string; // New field for the "Text Box" detail
+  description: string;
 }
 
-// --- 2. BACKUP DATA WITH DESCRIPTIONS ---
+// --- BACKUP DATA ---
 const BACKUP_HACKATHONS: Hackathon[] = [
   {
     id: "m1",
@@ -114,7 +115,9 @@ export default function HackathonPage() {
   const [loading, setLoading] = useState(true);
   const [usingBackup, setUsingBackup] = useState(false);
 
-  // --- STATE FOR THE POPUP WINDOW ---
+  // 3. Initialize Navigation
+  const navigate = useNavigate();
+
   const [selectedHackathon, setSelectedHackathon] = useState<Hackathon | null>(
     null
   );
@@ -123,7 +126,12 @@ export default function HackathonPage() {
     setLoading(true);
     setUsingBackup(false);
     try {
-      const response = await fetch("https://kontests.net/api/v1/all");
+      // PROXY FIX for CORS
+      const proxyUrl = "https://api.allorigins.win/raw?url=";
+      const targetUrl = "https://kontests.net/api/v1/all";
+
+      const response = await fetch(proxyUrl + encodeURIComponent(targetUrl));
+
       if (!response.ok) throw new Error("API Failed");
       const data: any[] = await response.json();
 
@@ -209,7 +217,21 @@ export default function HackathonPage() {
                 Discover India's top coding battles.
               </p>
             </div>
-            <div className="flex items-center gap-2">
+
+            <div className="flex items-center gap-3">
+              {/* --- 4. NEW CALENDAR BUTTON --- */}
+              <Button
+                variant="default" // Using default (solid color) to highlight it
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white gap-2 shadow-lg shadow-purple-500/20"
+                onClick={() => navigate("/dashboard/calendar")}
+              >
+                <CalendarDays className="w-4 h-4" />
+                My Calendar
+              </Button>
+
+              <div className="h-6 w-[1px] bg-border mx-1 hidden md:block"></div>
+
               {usingBackup && (
                 <Badge
                   variant="destructive"
@@ -351,7 +373,6 @@ export default function HackathonPage() {
                           {hack.dates}
                         </div>
 
-                        {/* --- CLICK TRIGGER FOR DETAILS --- */}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -398,7 +419,6 @@ export default function HackathonPage() {
                   {selectedHackathon.title}
                 </DialogTitle>
 
-                {/* --- DESCRIPTION TEXT BOX --- */}
                 <div className="mt-4 p-4 rounded-xl bg-muted/30 border border-border/50 text-sm text-muted-foreground leading-relaxed">
                   <div className="flex items-center gap-2 mb-2 text-primary font-semibold text-xs uppercase tracking-wider">
                     <Info className="w-4 h-4" /> About Event

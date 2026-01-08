@@ -8,6 +8,7 @@ require("dotenv").config();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const app = express();
 const { generateHackathonIdeas } = require("./services/aiService");
+const Calendar = require("./models/calendar");
 
 // -------------------- MIDDLEWARE --------------------
 app.use(express.json());
@@ -74,6 +75,38 @@ const verifyToken = (req, res, next) => {
     res.status(403).json({ message: "Invalid token" });
   }
 };
+// -------------------- MY CALENDAR ROUTES --------------------
+
+// GET CALENDAR EVENTS
+app.get("/api/calendar", verifyToken, async (req, res) => {
+  try {
+    const events = await Calendar.find({ userId: req.user.id }).sort({
+      date: 1,
+    });
+    res.json(events);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch calendar events" });
+  }
+});
+
+// ADD NOTE / EVENT
+app.post("/api/calendar", verifyToken, async (req, res) => {
+  try {
+    const { title, date, note } = req.body;
+
+    const event = new Calendar({
+      userId: req.user.id,
+      title,
+      date,
+      note,
+    });
+
+    await event.save();
+    res.json({ message: "Saved to calendar" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to save event" });
+  }
+});
 
 // -------------------- ROUTES --------------------
 
