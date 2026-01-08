@@ -1,276 +1,331 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { User, Bell, Shield, LogOut } from "lucide-react";
+import axios from "axios";
+import { useAuth } from "@/context/AuthContext";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
-import { Switch } from "@/components/ui/switch";
-import { TechTag } from "@/components/TechTag";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import {
+  Loader2,
+  Save,
+  User,
+  Github,
+  Briefcase,
+  GraduationCap,
+  X,
+} from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const techOptions = [
-  "React", "Python", "TypeScript", "Node.js", "Flutter", 
-  "Swift", "Rust", "Go", "Java", "C++",
-  "Machine Learning", "Web3", "DevOps", "UI/UX", "Mobile"
-];
+export default function Settings() {
+  const { token, logout } = useAuth();
+  const navigate = useNavigate();
 
-const Settings = () => {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState("profile");
-  const [notifications, setNotifications] = useState({
-    matches: true,
-    messages: true,
-    marketing: false,
-  });
-  const [selectedTech, setSelectedTech] = useState(["React", "TypeScript", "Python"]);
 
-  const handleTechToggle = (tech: string) => {
-    setSelectedTech(prev =>
-      prev.includes(tech)
-        ? prev.filter(t => t !== tech)
-        : [...prev, tech]
-    );
+  // Form State
+  const [formData, setFormData] = useState({
+    name: "",
+    college: "",
+    role: "",
+    bio: "",
+    github: "",
+    mode: "Chill",
+    skills: [] as string[],
+  });
+
+  const [newSkill, setNewSkill] = useState("");
+
+  // 1. Fetch Current Data
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/user/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setFormData(res.data);
+      } catch (error) {
+        console.error("Failed to load profile", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (token) fetchProfile();
+  }, [token]);
+
+  // 2. Handle Input Change
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData({ ...formData, [e.target.id]: e.target.value });
   };
 
-  const tabs = [
-    { id: "profile", label: "Profile", icon: User },
-    { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "privacy", label: "Privacy", icon: Shield },
-  ];
+  const handleRoleChange = (value: string) => {
+    setFormData({ ...formData, role: value });
+  };
+
+  const handleModeChange = (value: string) => {
+    setFormData({ ...formData, mode: value });
+  };
+
+  // 3. Skills Logic
+  const addSkill = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && newSkill.trim()) {
+      e.preventDefault();
+      if (!formData.skills.includes(newSkill.trim())) {
+        setFormData({
+          ...formData,
+          skills: [...formData.skills, newSkill.trim()],
+        });
+      }
+      setNewSkill("");
+    }
+  };
+
+  const removeSkill = (skillToRemove: string) => {
+    setFormData({
+      ...formData,
+      skills: formData.skills.filter((s) => s !== skillToRemove),
+    });
+  };
+
+  // 4. Save Changes
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await axios.put(
+        "http://localhost:5000/api/user/update",
+        formData,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      // Update local storage so Dashboard reflects changes immediately
+      localStorage.setItem("userName", res.data.user.name);
+      localStorage.setItem("userRole", res.data.user.role);
+      localStorage.setItem("userCollege", res.data.user.college);
+
+      alert("Profile updated successfully!");
+    } catch (error) {
+      console.error("Update failed", error);
+      alert("Failed to update profile.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading)
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="animate-spin" />
+      </div>
+    );
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen bg-background text-foreground overflow-hidden">
       <DashboardSidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
 
-      <main className="flex-1 overflow-y-auto">
-        {/* Header */}
-        <motion.header
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="h-16 glass border-b flex items-center px-6"
-        >
-          <h1 className="text-xl font-bold text-foreground">Settings</h1>
-        </motion.header>
-
-        <div className="container max-w-4xl mx-auto px-4 py-8">
-          {/* Tabs */}
-          <div className="flex gap-2 mb-8">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all",
-                  activeTab === tab.id
-                    ? "gradient-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                )}
-              >
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Profile Tab */}
-          {activeTab === "profile" && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
+      <main className="flex-1 overflow-y-auto p-6 md:p-12 relative">
+        <div className="max-w-3xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 flex justify-between items-center"
+          >
+            <div>
+              <h1 className="text-3xl font-bold">Settings</h1>
+              <p className="text-muted-foreground">
+                Manage your account and profile details.
+              </p>
+            </div>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                logout();
+                navigate("/auth");
+              }}
             >
-              <div className="glass rounded-2xl p-6 border">
-                <h2 className="text-lg font-bold text-foreground mb-6">
-                  Your Profile
-                </h2>
+              Logout
+            </Button>
+          </motion.div>
 
-                <div className="flex items-start gap-6">
-                  <div className="w-24 h-24 rounded-2xl gradient-primary flex items-center justify-center text-4xl flex-shrink-0">
-                    👤
+          <div className="grid gap-8">
+            {/* AVATAR SECTION */}
+            <div className="bg-card border border-border rounded-xl p-6 flex items-center gap-6 shadow-sm">
+              <Avatar className="h-24 w-24 border-4 border-primary/10">
+                <AvatarImage
+                  src={`https://api.dicebear.com/7.x/initials/svg?seed=${formData.name}`}
+                />
+                <AvatarFallback>ME</AvatarFallback>
+              </Avatar>
+              <div>
+                <h3 className="text-xl font-bold">{formData.name}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {formData.role} • {formData.college}
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <Badge variant="outline" className="capitalize">
+                    {formData.mode} Mode
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            {/* FORM SECTION */}
+            <div className="bg-card border border-border rounded-xl p-8 shadow-sm space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      className="pl-9"
+                    />
                   </div>
-                  <div className="flex-1 space-y-4">
-                    <div>
-                      <label className="block text-sm text-muted-foreground mb-2">
-                        Display Name
-                      </label>
-                      <input
-                        type="text"
-                        defaultValue="Anonymous Hacker"
-                        className="w-full px-4 py-3 rounded-xl bg-secondary border border-border focus:border-primary focus:outline-none text-foreground"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm text-muted-foreground mb-2">
-                        Role
-                      </label>
-                      <input
-                        type="text"
-                        defaultValue="Full Stack Developer"
-                        className="w-full px-4 py-3 rounded-xl bg-secondary border border-border focus:border-primary focus:outline-none text-foreground"
-                      />
-                    </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="college">College / University</Label>
+                  <div className="relative">
+                    <GraduationCap className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="college"
+                      value={formData.college}
+                      onChange={handleChange}
+                      className="pl-9"
+                    />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Primary Role</Label>
+                  <Select
+                    value={formData.role}
+                    onValueChange={handleRoleChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Frontend">Frontend Dev</SelectItem>
+                      <SelectItem value="Backend">Backend Dev</SelectItem>
+                      <SelectItem value="FullStack">Full Stack</SelectItem>
+                      <SelectItem value="AI/ML">AI / ML Engineer</SelectItem>
+                      <SelectItem value="Design">UI/UX Designer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Hackathon Mode</Label>
+                  <Select
+                    value={formData.mode}
+                    onValueChange={handleModeChange}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Chill">☕ Chill (Learning)</SelectItem>
+                      <SelectItem value="Beast">🔥 Beast (Winning)</SelectItem>
+                      <SelectItem value="Newbie">
+                        🎓 Newbie (First Time)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
-              <div className="glass rounded-2xl p-6 border">
-                <h2 className="text-lg font-bold text-foreground mb-4">
-                  Tech Stack
-                </h2>
-                <p className="text-sm text-muted-foreground mb-6">
-                  Select the technologies you work with
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {techOptions.map((tech) => (
-                    <TechTag
-                      key={tech}
-                      label={tech}
-                      selected={selectedTech.includes(tech)}
-                      onClick={() => handleTechToggle(tech)}
-                      size="sm"
-                    />
+              <div className="space-y-2">
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  id="bio"
+                  value={formData.bio}
+                  onChange={handleChange}
+                  className="min-h-[100px]"
+                  placeholder="Tell us about yourself..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="github">GitHub Profile (Optional)</Label>
+                <div className="relative">
+                  <Github className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="github"
+                    value={formData.github}
+                    onChange={handleChange}
+                    className="pl-9"
+                    placeholder="https://github.com/..."
+                  />
+                </div>
+              </div>
+
+              {/* SKILLS INPUT */}
+              <div className="space-y-3">
+                <Label>Skills & Tech Stack</Label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {formData.skills.map((skill) => (
+                    <Badge
+                      key={skill}
+                      variant="secondary"
+                      className="px-3 py-1 text-sm flex items-center gap-1"
+                    >
+                      {skill}
+                      <X
+                        className="w-3 h-3 cursor-pointer hover:text-red-500"
+                        onClick={() => removeSkill(skill)}
+                      />
+                    </Badge>
                   ))}
                 </div>
+                <Input
+                  placeholder="Type a skill and press Enter (e.g. React)..."
+                  value={newSkill}
+                  onChange={(e) => setNewSkill(e.target.value)}
+                  onKeyDown={addSkill}
+                />
               </div>
 
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full gradient-primary text-primary-foreground py-3 rounded-xl font-semibold"
-              >
-                Save Changes
-              </motion.button>
-            </motion.div>
-          )}
-
-          {/* Notifications Tab */}
-          {activeTab === "notifications" && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="glass rounded-2xl p-6 border"
-            >
-              <h2 className="text-lg font-bold text-foreground mb-6">
-                Notification Preferences
-              </h2>
-
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium text-foreground">New Matches</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Get notified when someone matches with you
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.matches}
-                    onCheckedChange={(checked) =>
-                      setNotifications({ ...notifications, matches: checked })
-                    }
-                  />
-                </div>
-
-                <div className="border-t border-border" />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium text-foreground">Messages</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Receive notifications for new messages
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.messages}
-                    onCheckedChange={(checked) =>
-                      setNotifications({ ...notifications, messages: checked })
-                    }
-                  />
-                </div>
-
-                <div className="border-t border-border" />
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium text-foreground">Marketing</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Tips, hackathon announcements, and updates
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notifications.marketing}
-                    onCheckedChange={(checked) =>
-                      setNotifications({ ...notifications, marketing: checked })
-                    }
-                  />
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Privacy Tab */}
-          {activeTab === "privacy" && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
-            >
-              <div className="glass rounded-2xl p-6 border">
-                <h2 className="text-lg font-bold text-foreground mb-4">
-                  Privacy Settings
-                </h2>
-                <p className="text-sm text-muted-foreground mb-6">
-                  Control how your profile appears to others
-                </p>
-
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-foreground">Show Online Status</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Let others see when you're active
-                      </p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-
-                  <div className="border-t border-border" />
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-medium text-foreground">Profile Visibility</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Allow other hackers to discover your profile
-                      </p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                </div>
-              </div>
-
-              <div className="glass rounded-2xl p-6 border border-destructive/30">
-                <h2 className="text-lg font-bold text-destructive mb-4">
-                  Danger Zone
-                </h2>
-                <p className="text-sm text-muted-foreground mb-6">
-                  These actions are irreversible
-                </p>
-
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
+              {/* SAVE BUTTON */}
+              <div className="pt-4 flex justify-end">
+                <Button
+                  onClick={handleSave}
+                  disabled={saving}
+                  size="lg"
+                  className="w-full md:w-auto"
                 >
-                  <LogOut className="w-4 h-4" />
-                  Delete Account
-                </motion.button>
+                  {saving ? (
+                    <Loader2 className="animate-spin mr-2" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
+                  Save Changes
+                </Button>
               </div>
-            </motion.div>
-          )}
+            </div>
+          </div>
         </div>
       </main>
     </div>
   );
-};
-
-export default Settings;
+}
