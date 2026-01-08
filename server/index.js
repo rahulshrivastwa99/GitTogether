@@ -45,15 +45,64 @@ const userSchema = new mongoose.Schema({
   github: { type: String },
   mode: { type: String, default: "Chill" },
   isOnboarded: { type: Boolean, default: false },
-
-  // 🔥 FIX: Added avatarGradient field
   avatarGradient: { type: String },
-
   swipedRight: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   matches: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 });
 
 const User = mongoose.model("User", userSchema);
+
+// 2. 🔥 Message Schema (For Chat History)
+const messageSchema = new mongoose.Schema({
+  sender: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  receiver: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  content: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now },
+});
+
+const Message = mongoose.model("Message", messageSchema);
+
+// -------------------- SOCKET.IO LOGIC --------------------
+io.on("connection", (socket) => {
+  console.log(`⚡ User Connected: ${socket.id}`);
+
+  // User joins a personal room based on their User ID
+  socket.on("join_room", (userId) => {
+    socket.join(userId);
+    console.log(`👤 User joined room: ${userId}`);
+  });
+
+  // Handle sending messages
+  socket.on("send_message", async (data) => {
+    const { senderId, receiverId, content } = data;
+
+    // 1. Save to MongoDB
+    try {
+      const newMessage = new Message({
+        sender: senderId,
+        receiver: receiverId,
+        content,
+      });
+      await newMessage.save();
+
+      // 2. Send to Receiver (Real-time)
+      io.to(receiverId).emit("receive_message", newMessage);
+
+      // 3. Send back to Sender (for UI update)
+      io.to(senderId).emit("receive_message", newMessage);
+    } catch (err) {
+      console.error("Message Save Error:", err);
+    }
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User Disconnected", socket.id);
+  });
+});
 
 // -------------------- AUTH MIDDLEWARE --------------------
 const verifyToken = (req, res, next) => {
@@ -251,6 +300,7 @@ app.get("/api/users", verifyToken, async (req, res) => {
 });
 
 // 5. SWIPE ACTION (🔥 FIXED MATCH LOGIC)
+// server/index.js - Updated Swipe Logic
 app.post("/api/swipe", verifyToken, async (req, res) => {
   try {
     const { targetUserId, direction } = req.body;
@@ -258,35 +308,42 @@ app.post("/api/swipe", verifyToken, async (req, res) => {
 
     if (direction === "left") return res.json({ match: false });
 
-    if (direction === "right") {
-      const currentUser = await User.findById(currentUserId);
-      const targetUser = await User.findById(targetUserId);
+    const currentUser = await User.findById(currentUserId);
+    const targetUser = await User.findById(targetUserId);
 
-      // 1. Record the Swipe
-      if (!currentUser.swipedRight.includes(targetUserId)) {
-        currentUser.swipedRight.push(targetUserId);
+    if (!currentUser.swipedRight.includes(targetUserId)) {
+      currentUser.swipedRight.push(targetUserId);
+      await currentUser.save();
+    }
+
+    // Check for a mutual match
+    if (targetUser.swipedRight.includes(currentUserId)) {
+      if (!currentUser.matches.includes(targetUserId)) {
+        currentUser.matches.push(targetUserId);
         await currentUser.save();
       }
-
-      // 2. Check for Match
-      if (targetUser.swipedRight.includes(currentUserId)) {
-        // 🔥 FIX: Update BOTH users' matches array
-        if (!currentUser.matches.includes(targetUserId)) {
-          currentUser.matches.push(targetUserId);
-          await currentUser.save();
-        }
-        if (!targetUser.matches.includes(currentUserId)) {
-          targetUser.matches.push(currentUserId);
-          await targetUser.save();
-        }
-
-        res.json({ match: true });
-        return;
+      if (!targetUser.matches.includes(currentUserId)) {
+        targetUser.matches.push(currentUserId);
+        await targetUser.save();
       }
+
+      // 🔥 EMIT REAL-TIME NOTIFICATION TO PARTNER
+      // This tells User B "Hey, User A just swiped you back!"
+      io.to(targetUserId).emit("match_found", {
+        id: currentUser._id,
+        name: currentUser.name,
+        avatarGradient: currentUser.avatarGradient,
+        role: currentUser.role,
+        college: currentUser.college,
+        bio: currentUser.bio,
+        skills: currentUser.skills,
+      });
+
+      res.json({ match: true });
+      return;
     }
     res.json({ match: false });
   } catch (error) {
-    console.error(error);
     res.status(500).json({ message: "Swipe failed" });
   }
 });
@@ -308,7 +365,7 @@ app.post("/api/idea-spark", async (req, res) => {
       .json({ message: "AI generation failed, please try again." });
   }
 });
-
+//8...hackathon finder
 app.get("/api/live-hackathons", async (req, res) => {
   try {
     console.log("🤖 AI is searching for live hackathons...");
@@ -339,5 +396,27 @@ app.get("/api/matches", verifyToken, async (req, res) => {
   }
 });
 
+// 🔥 8. GET CHAT HISTORY (New Route)
+app.get("/api/messages/:partnerId", verifyToken, async (req, res) => {
+  try {
+    const myId = req.user.id;
+    const { partnerId } = req.params;
+
+    const messages = await Message.find({
+      $or: [
+        { sender: myId, receiver: partnerId },
+        { sender: partnerId, receiver: myId },
+      ],
+    }).sort({ timestamp: 1 }); // Sort by time (oldest first)
+
+    res.json(messages);
+  } catch (error) {
+    console.error("Chat Error:", error);
+    res.status(500).json({ message: "Failed to load chat" });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+server.listen(PORT, () =>
+  console.log(`🚀 Server running on port ${PORT} with Socket.io`)
+);

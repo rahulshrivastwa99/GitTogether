@@ -24,6 +24,7 @@ interface MatchesSidebarProps {
   sentRequests: UserProfile[]; // Outgoing requests (Pending)
   onAccept: (user: UserProfile) => void;
   onDecline: (userId: string) => void;
+  onOpenChat: (user: UserProfile) => void;
 }
 
 export const MatchesSidebar = ({
@@ -34,6 +35,7 @@ export const MatchesSidebar = ({
   sentRequests,
   onAccept,
   onDecline,
+  onOpenChat,
 }: MatchesSidebarProps) => {
   const [selectedProfile, setSelectedProfile] = useState<UserProfile | null>(
     null
@@ -231,7 +233,7 @@ export const MatchesSidebar = ({
                         <div
                           key={match.id}
                           className="flex items-center gap-3 p-2 hover:bg-muted rounded-lg cursor-pointer transition-colors group"
-                          onClick={() => setSelectedProfile(match)}
+                          onClick={() => onOpenChat(match)}
                         >
                           <div className="relative">
                             <Avatar>

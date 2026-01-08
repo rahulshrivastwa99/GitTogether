@@ -11,6 +11,7 @@ interface MatchDialogProps {
   onClose: () => void;
   matchedUser: UserProfile | null;
   currentUserImage: string;
+  onStartChat: () => void; // 🔥 ADD THIS
 }
 
 export function MatchDialog({
@@ -18,6 +19,7 @@ export function MatchDialog({
   onClose,
   matchedUser,
   currentUserImage,
+  onStartChat, // 🔥 ADD THIS
 }: MatchDialogProps) {
   // If you didn't install react-use, just hardcode width/height or remove Confetti
   // const { width, height } = useWindowSize();
@@ -101,7 +103,10 @@ export function MatchDialog({
 
               {/* Action Buttons */}
               <div className="space-y-3">
-                <Button className="w-full h-12 text-lg rounded-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 shadow-lg group">
+                <Button
+                  onClick={onStartChat} // 🔥 ATTACH HANDLER HERE
+                  className="w-full h-12 text-lg rounded-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 shadow-lg group"
+                >
                   <MessageCircle className="w-5 h-5 mr-2 group-hover:animate-bounce" />
                   Send a Message
                 </Button>
