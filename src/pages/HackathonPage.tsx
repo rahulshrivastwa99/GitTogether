@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom"; // 1. Import useNavigate
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   MapPin,
@@ -15,7 +15,7 @@ import {
   Users,
   BookOpen,
   Info,
-  CalendarDays, // 2. Import Calendar icon for the button
+  CalendarDays,
 } from "lucide-react";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { Input } from "@/components/ui/input";
@@ -41,7 +41,7 @@ interface Hackathon {
   dates: string;
   startDate: string;
   endDate: string;
-  status: "Live" | "Upcoming";
+  status: string; // Changed from strict literal to handle AI variations
   link: string;
   description: string;
 }
@@ -59,22 +59,7 @@ const BACKUP_HACKATHONS: Hackathon[] = [
     endDate: "2026-08-05",
     status: "Upcoming",
     link: "https://sih.gov.in/",
-    description:
-      "The world's largest open innovation model! Smart India Hackathon 2026 invites students to solve some of the most pressing problems we face in our daily lives. Themes include Smart Automation, Heritage & Culture, and Clean Water.",
-  },
-  {
-    id: "m2",
-    title: "Flipkart GRiD 7.0",
-    host: "Flipkart",
-    location: "Online",
-    prize: "₹1,50,000",
-    dates: "July 2026",
-    startDate: "2026-07-15",
-    endDate: "2026-07-20",
-    status: "Upcoming",
-    link: "https://unstop.com/",
-    description:
-      "Flipkart GRiD is our flagship engineering campus challenge. It provides you the opportunity to apply your technical knowledge to solve real world e-commerce problems. Winners get direct interviews for SDE roles!",
+    description: "The world's largest open innovation model!",
   },
   {
     id: "m3",
@@ -88,21 +73,7 @@ const BACKUP_HACKATHONS: Hackathon[] = [
     status: "Live",
     link: "https://developers.google.com/",
     description:
-      "Build a solution to a local problem using Google technologies, in accordance with one or more of the United Nations 17 Sustainable Development Goals. The top 100 teams receive mentorship from Google experts.",
-  },
-  {
-    id: "m4",
-    title: "ETHIndia 2025",
-    host: "Devfolio",
-    location: "Bangalore",
-    prize: "$50,000",
-    dates: "Dec 2025",
-    startDate: "2025-12-04",
-    endDate: "2025-12-06",
-    status: "Upcoming",
-    link: "https://ethindia.co/",
-    description:
-      "Asia's biggest Ethereum hackathon. Join 2000+ builders for 3 days of hacking, learning, and networking. Whether you are a DeFi wizard or an NFT novice, there is a place for you here.",
+      "Build a solution to a local problem using Google technologies.",
   },
 ];
 
@@ -110,67 +81,35 @@ export default function HackathonPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("All");
-
   const [hackathons, setHackathons] = useState<Hackathon[]>([]);
   const [loading, setLoading] = useState(true);
   const [usingBackup, setUsingBackup] = useState(false);
-
-  // 3. Initialize Navigation
-  const navigate = useNavigate();
-
   const [selectedHackathon, setSelectedHackathon] = useState<Hackathon | null>(
     null
   );
+
+  const navigate = useNavigate();
 
   const fetchLiveHackathons = async () => {
     setLoading(true);
     setUsingBackup(false);
     try {
-      // PROXY FIX for CORS
-      const proxyUrl = "https://api.allorigins.win/raw?url=";
-      const targetUrl = "https://kontests.net/api/v1/all";
+      const response = await fetch(
+        "http://localhost:5000/api/live-hackathons",
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
 
-      const response = await fetch(proxyUrl + encodeURIComponent(targetUrl));
+      if (!response.ok) throw new Error("Backend API Failed");
 
-      if (!response.ok) throw new Error("API Failed");
-      const data: any[] = await response.json();
-
-      const relevantSites = [
-        "HackerEarth",
-        "HackerRank",
-        "LeetCode",
-        "CodeChef",
-        "AtCoder",
-      ];
-      const liveData: Hackathon[] = data
-        .filter((item) => relevantSites.includes(item.site))
-        .map((item, index) => {
-          const now = new Date();
-          const start = new Date(item.start_time);
-          const end = new Date(item.end_time);
-          const isLive = now >= start && now <= end;
-
-          return {
-            id: `api-${index}`,
-            title: item.name,
-            host: item.site,
-            location: "Online",
-            prize: "See Details",
-            dates: start.toLocaleDateString("en-IN", {
-              month: "short",
-              day: "numeric",
-            }),
-            startDate: item.start_time,
-            endDate: item.end_time,
-            status: isLive ? "Live" : "Upcoming",
-            link: item.url,
-            description: `Join the ${item.name} hosted by ${item.site}. This is a competitive programming contest open to participants worldwide. Test your algorithmic skills and climb the leaderboard!`,
-          };
-        });
-
-      if (liveData.length === 0) throw new Error("No data");
-      setHackathons(liveData);
+      const data = await response.json();
+      setHackathons(data);
+      console.log("✅ AI Hackathons loaded successfully:", data);
     } catch (err) {
+      console.error("❌ AI Fetch failed, falling back to backup:", err);
       setHackathons(BACKUP_HACKATHONS);
       setUsingBackup(true);
     } finally {
@@ -182,17 +121,57 @@ export default function HackathonPage() {
     fetchLiveHackathons();
   }, []);
 
+  // Inside HackathonPage.tsx
+  const addToCalendar = async (hack: Hackathon) => {
+    try {
+      const response = await fetch("http://localhost:5000/api/calendar", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          title: hack.title,
+          date: hack.dates,
+          host: hack.host,
+          location: hack.location,
+          prize: hack.prize,
+          description: hack.description,
+          link: hack.link,
+          note: "Saved from Arena",
+        }),
+      });
+      if (response.ok) {
+        alert("🚀 Added to your calendar!");
+      } else {
+        throw new Error("Failed to save");
+      }
+    } catch (error) {
+      console.error("Save Error:", error);
+      alert("Could not save to calendar.");
+    }
+  };
+
+  // --- FILTER LOGIC (FIXED BLANK SCREEN ISSUE) ---
   const filteredHackathons = hackathons.filter((hack) => {
-    const matchesSearch =
-      hack.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      hack.host.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesTab = activeTab === "All" || hack.status === activeTab;
+    // 1. Search Query Match
+    const title = hack.title?.toLowerCase() || "";
+    const host = hack.host?.toLowerCase() || "";
+    const search = searchQuery.toLowerCase();
+    const matchesSearch = title.includes(search) || host.includes(search);
+
+    // 2. Tab Match (Case-Insensitive & Trimmed)
+    const hackStatus = hack.status?.trim().toLowerCase() || "";
+    const currentTab = activeTab.toLowerCase();
+    const matchesTab = activeTab === "All" || hackStatus === currentTab;
+
     return matchesSearch && matchesTab;
   });
 
   const getDuration = (start: string, end: string) => {
     const s = new Date(start);
     const e = new Date(end);
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) return "Check Details";
     const diffTime = Math.abs(e.getTime() - s.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays > 1 ? `${diffDays} Days` : "24 Hours";
@@ -219,10 +198,9 @@ export default function HackathonPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* --- 4. NEW CALENDAR BUTTON --- */}
+              {/* --- CORRECTED CALENDAR ROUTE --- */}
               <Button
-                variant="default" // Using default (solid color) to highlight it
-                size="sm"
+                variant="default"
                 className="bg-purple-600 hover:bg-purple-700 text-white gap-2 shadow-lg shadow-purple-500/20"
                 onClick={() => navigate("/dashboard/calendar")}
               >
@@ -301,6 +279,15 @@ export default function HackathonPage() {
                 Syncing hackathon data...
               </p>
             </div>
+          ) : filteredHackathons.length === 0 ? (
+            <div className="text-center py-20 border border-dashed rounded-2xl">
+              <p className="text-muted-foreground">
+                No hackathons found in this category.
+              </p>
+              <Button variant="link" onClick={() => setActiveTab("All")}>
+                View All Events
+              </Button>
+            </div>
           ) : (
             <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredHackathons.map((hack) => (
@@ -311,72 +298,50 @@ export default function HackathonPage() {
                   whileHover={{ y: -5 }}
                   className="group relative h-full"
                 >
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-r ${
-                      hack.status === "Live"
-                        ? "from-red-500 to-orange-500"
-                        : "from-blue-500 to-purple-500"
-                    } opacity-0 group-hover:opacity-10 rounded-2xl transition-opacity duration-300`}
-                  />
-
                   <Card className="h-full bg-card border-border/50 overflow-hidden flex flex-col hover:border-primary/50 transition-colors">
                     <div
                       className={`h-2 w-full bg-gradient-to-r ${
-                        hack.status === "Live"
+                        hack.status.toLowerCase() === "live"
                           ? "from-red-500 to-orange-500"
                           : "from-blue-500 to-purple-500"
                       }`}
                     />
-
                     <div className="p-6 flex-1 flex flex-col">
                       <div className="flex justify-between items-start mb-4">
                         <Badge
                           variant="outline"
-                          className={`border-none px-2 py-1 uppercase text-[10px] tracking-wider font-bold ${
-                            hack.status === "Live"
+                          className={`capitalize ${
+                            hack.status.toLowerCase() === "live"
                               ? "bg-red-500/10 text-red-500"
                               : "bg-blue-500/10 text-blue-500"
                           }`}
                         >
                           {hack.status}
                         </Badge>
-                        {hack.status === "Live" && (
-                          <span className="relative flex h-3 w-3">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                          </span>
-                        )}
                       </div>
-
-                      <div className="mb-1 text-xs font-bold text-primary uppercase tracking-widest opacity-80">
+                      <div className="mb-1 text-xs font-bold text-primary uppercase tracking-widest">
                         {hack.host}
                       </div>
-
-                      <h3 className="text-lg font-bold mb-2 line-clamp-2 group-hover:text-primary transition-colors h-14">
+                      <h3 className="text-lg font-bold mb-2 line-clamp-2 h-14">
                         {hack.title}
                       </h3>
-
                       <div className="space-y-2 text-sm text-muted-foreground mb-6">
                         <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4 text-gray-500" />
+                          <MapPin className="w-4 h-4" />
                           {hack.location}
                         </div>
                         <div className="flex items-center gap-2">
                           <Trophy className="w-4 h-4 text-yellow-500" />
-                          <span className="truncate">{hack.prize}</span>
+                          {hack.prize}
                         </div>
                       </div>
-
                       <div className="mt-auto pt-4 border-t border-border/50 flex items-center justify-between">
                         <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {hack.dates}
+                          <Calendar className="w-3 h-3" /> {hack.dates}
                         </div>
-
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="gap-1 text-primary hover:text-primary hover:bg-primary/10"
                           onClick={() => setSelectedHackathon(hack)}
                         >
                           Details <ExternalLink className="w-3 h-3" />
@@ -391,46 +356,31 @@ export default function HackathonPage() {
         </div>
       </main>
 
-      {/* --- THE DETAIL WINDOW BOX (MODAL) --- */}
       <Dialog
         open={!!selectedHackathon}
         onOpenChange={() => setSelectedHackathon(null)}
       >
-        <DialogContent className="sm:max-w-lg bg-card border-border shadow-2xl">
+        <DialogContent className="sm:max-w-lg">
           {selectedHackathon && (
             <>
               <DialogHeader>
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge
-                    variant="outline"
-                    className={`${
-                      selectedHackathon.status === "Live"
-                        ? "text-red-500 border-red-500/20 bg-red-500/10"
-                        : "text-blue-500 border-blue-500/20 bg-blue-500/10"
-                    }`}
-                  >
-                    {selectedHackathon.status}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                  <Badge variant="outline">{selectedHackathon.status}</Badge>
+                  <span className="text-xs text-muted-foreground uppercase">
                     {selectedHackathon.host}
                   </span>
                 </div>
-                <DialogTitle className="text-2xl font-bold text-foreground leading-tight">
+                <DialogTitle className="text-2xl font-bold">
                   {selectedHackathon.title}
                 </DialogTitle>
-
-                <div className="mt-4 p-4 rounded-xl bg-muted/30 border border-border/50 text-sm text-muted-foreground leading-relaxed">
-                  <div className="flex items-center gap-2 mb-2 text-primary font-semibold text-xs uppercase tracking-wider">
-                    <Info className="w-4 h-4" /> About Event
-                  </div>
+                <div className="mt-4 p-4 rounded-xl bg-muted/30 text-sm text-muted-foreground">
                   {selectedHackathon.description}
                 </div>
               </DialogHeader>
-
               <div className="grid grid-cols-2 gap-4 py-2">
-                <div className="p-3 rounded-lg bg-muted/50 border border-border/50 flex flex-col justify-center">
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> Duration
+                <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
+                  <div className="text-xs text-muted-foreground uppercase mb-1">
+                    Duration
                   </div>
                   <div className="font-semibold text-sm">
                     {getDuration(
@@ -439,56 +389,28 @@ export default function HackathonPage() {
                     )}
                   </div>
                 </div>
-
-                <div className="p-3 rounded-lg bg-muted/50 border border-border/50 flex flex-col justify-center">
-                  <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-                    <Trophy className="w-3 h-3" /> Prize
+                <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
+                  <div className="text-xs text-muted-foreground uppercase mb-1">
+                    Prize
                   </div>
-                  <div
-                    className="font-semibold text-sm truncate"
-                    title={selectedHackathon.prize}
-                  >
+                  <div className="font-semibold text-sm truncate">
                     {selectedHackathon.prize}
                   </div>
                 </div>
-
-                <div className="p-3 rounded-lg bg-muted/50 border border-border/50 col-span-2 flex items-center justify-between">
-                  <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <Globe className="w-3 h-3" /> Location
-                    </div>
-                    <div className="font-semibold text-sm">
-                      {selectedHackathon.location}
-                    </div>
-                  </div>
-                  <div className="h-8 w-[1px] bg-border mx-4"></div>
-                  <div>
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1">
-                      <Users className="w-3 h-3" /> Team Size
-                    </div>
-                    <div className="font-semibold text-sm">1 - 4 Members</div>
-                  </div>
-                </div>
               </div>
-
-              <div className="bg-primary/5 p-4 rounded-xl border border-primary/10 mb-2">
-                <h4 className="text-sm font-bold flex items-center gap-2 mb-2 text-primary">
-                  <BookOpen className="w-4 h-4" /> Eligibility Criteria
-                </h4>
-                <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                  <li>Open to all engineering students.</li>
-                  <li>Must have a valid college ID card.</li>
-                  <li>Both individual and team participation allowed.</li>
-                </ul>
-              </div>
-
-              <DialogFooter className="sm:justify-start">
+              <DialogFooter className="flex flex-col sm:flex-row gap-2">
                 <Button
-                  className="w-full gap-2 text-lg font-bold h-12"
-                  size="lg"
-                  onClick={() => window.open(selectedHackathon.link, "_blank")}
+                  variant="outline"
+                  onClick={() => addToCalendar(selectedHackathon!)}
                 >
-                  Register Now <ExternalLink className="w-5 h-5" />
+                  <CalendarDays className="mr-2 h-4 w-4" /> Save to Calendar
+                </Button>
+
+                <Button
+                  className="w-full gap-2 bg-primary"
+                  onClick={() => window.open(selectedHackathon!.link, "_blank")}
+                >
+                  Register Now <ExternalLink className="w-4 h-4" />
                 </Button>
               </DialogFooter>
             </>

@@ -7,9 +7,13 @@ const axios = require("axios");
 require("dotenv").config();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const app = express();
-const { generateHackathonIdeas } = require("./services/aiService");
+const {
+  generateHackathonIdeas,
+  fetchAIGeneratedHackathons,
+} = require("./services/aiService");
+const { findHackathons } = require("./services/findHack"); // <-- Add this line
+// const { generateHackathonIdeas } = require("./services/aiService");
 const Calendar = require("./models/calendar");
-
 // -------------------- MIDDLEWARE --------------------
 app.use(express.json());
 app.use(cors());
@@ -90,21 +94,42 @@ app.get("/api/calendar", verifyToken, async (req, res) => {
 });
 
 // ADD NOTE / EVENT
+// server/index.js
+// ADD TO CALENDAR
 app.post("/api/calendar", verifyToken, async (req, res) => {
   try {
-    const { title, date, note } = req.body;
+    const { title, date, note, host, location, prize, description, link } =
+      req.body;
 
     const event = new Calendar({
       userId: req.user.id,
       title,
       date,
       note,
+      host,
+      location,
+      prize,
+      description,
+      link,
     });
 
     await event.save();
-    res.json({ message: "Saved to calendar" });
+    res.json({ message: "Successfully added to calendar" });
   } catch (error) {
     res.status(500).json({ message: "Failed to save event" });
+  }
+});
+
+// DELETE FROM CALENDAR
+app.delete("/api/calendar/:id", verifyToken, async (req, res) => {
+  try {
+    await Calendar.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user.id,
+    });
+    res.json({ message: "Event deleted" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete event" });
   }
 });
 
@@ -272,6 +297,17 @@ app.post("/api/idea-spark", async (req, res) => {
     res
       .status(500)
       .json({ message: "AI generation failed, please try again." });
+  }
+});
+
+app.get("/api/live-hackathons", async (req, res) => {
+  try {
+    console.log("🤖 AI is searching for live hackathons...");
+    const hackathons = await findHackathons(); // This must match the imported name
+    res.json(hackathons);
+  } catch (error) {
+    console.error("AI Route Error:", error.message);
+    res.status(500).json({ message: "Failed to fetch AI hackathons" });
   }
 });
 
