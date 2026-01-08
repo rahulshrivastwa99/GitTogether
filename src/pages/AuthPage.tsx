@@ -49,6 +49,12 @@ export default function AuthPage() {
 
         const data = response.data;
 
+        // ✅ SAFETY CHECK (MOST IMPORTANT LINE)
+        if (!data?.user || !data?.token) {
+          setError(data?.message || "Invalid login credentials");
+          return;
+        }
+
         // 1. Update Context
         login(data.token, data.user.email, data.user.isOnboarded);
 
