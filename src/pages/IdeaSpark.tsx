@@ -17,11 +17,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import API_BASE_URL from "@/lib/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area"; // Ensure you have this or standard div
 
 // --- CONFIGURATION ---
-const BACKEND_URL = "http://localhost:5000";
+const BACKEND_URL = `${API_BASE_URL}`;
 
 // Updated Interface to include more details
 interface ProjectIdea {

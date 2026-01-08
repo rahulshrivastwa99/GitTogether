@@ -16,6 +16,7 @@ import { Navbar } from "@/components/Navbar";
 import { ModeCard } from "@/components/ModeCard";
 import { TechTag } from "@/components/TechTag";
 import { cn } from "@/lib/utils";
+import API_BASE_URL from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,7 +31,7 @@ import {
 } from "@/components/ui/select";
 
 // --- CONFIGURATION ---
-const BACKEND_URL = "http://localhost:5000";
+const BACKEND_URL = `${API_BASE_URL}`;
 
 const techOptions = [
   "React",

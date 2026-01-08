@@ -5,6 +5,8 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import API_BASE_URL from "@/lib/api";
+
 import axios from "axios";
 import {
   Sparkles,
@@ -36,7 +38,7 @@ export default function AuthPage() {
     setIsLoading(true);
 
     try {
-      const API_URL = "http://localhost:5000/api";
+      const API_URL = `${API_BASE_URL}/api`;
 
       if (isLogin) {
         // --- LOGIN LOGIC ---

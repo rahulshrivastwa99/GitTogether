@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import API_BASE_URL from "@/lib/api";
 import {
   MessageCircle,
   Filter,
@@ -119,7 +120,7 @@ const Dashboard = () => {
 
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:5000/api/users", {
+      const response = await axios.get(`${API_BASE_URL}/api/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -152,7 +153,7 @@ const Dashboard = () => {
   const fetchMatches = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await axios.get("http://localhost:5000/api/matches", {
+      const response = await axios.get(`${API_BASE_URL}/api/matches`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -216,7 +217,7 @@ const Dashboard = () => {
 
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/swipe",
+        `${API_BASE_URL}/api/swipe`,
         {
           targetUserId: currentUser.id || currentUser._id,
           direction,

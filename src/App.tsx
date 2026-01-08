@@ -18,6 +18,8 @@ import CalendarPage from "./pages/CalendarPage";
 import TeamAnalysis from "./pages/TeamAnalysis";
 import TeamAgreement from "./pages/TeamAgreement";
 
+console.log("API BASE URL:", import.meta.env.VITE_API_BASE_URL);
+
 const queryClient = new QueryClient();
 
 // ProtectedRoute: Only allows access if user has a Token
@@ -28,6 +30,7 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   }
   return children;
 };
+// console.log("API BASE URL:", import.meta.env.VITE_API_BASE_URL);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
