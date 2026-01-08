@@ -1,0 +1,167 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@layer base {
+  :root {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 10% 6%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 10% 6%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 263 70% 58%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 10% 12%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 10% 15%;
+    --muted-foreground: 240 5% 64.9%;
+
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+
+    --border: 240 10% 15%;
+    --input: 240 10% 15%;
+    --ring: 263 70% 58%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 240 10% 5%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 263 70% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 10% 10%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 10% 12%;
+    --sidebar-ring: 263 70% 58%;
+
+    /* Custom gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(263, 70%, 58%) 0%, hsl(217, 91%, 60%) 100%);
+    --gradient-beast: linear-gradient(135deg, hsl(0, 84%, 60%) 0%, hsl(25, 95%, 53%) 100%);
+    --gradient-chill: linear-gradient(135deg, hsl(217, 91%, 60%) 0%, hsl(142, 76%, 36%) 100%);
+    --gradient-newbie: linear-gradient(135deg, hsl(45, 93%, 47%) 0%, hsl(38, 92%, 50%) 100%);
+    --gradient-glow: radial-gradient(ellipse at center, hsl(263, 70%, 58%, 0.15) 0%, transparent 70%);
+
+    /* Glass effect */
+    --glass-bg: hsla(240, 10%, 8%, 0.7);
+    --glass-border: hsla(240, 10%, 20%, 0.5);
+  }
+
+  .dark {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply backdrop-blur-xl border;
+    background: var(--glass-bg);
+    border-color: var(--glass-border);
+  }
+
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+
+  .gradient-beast {
+    background: var(--gradient-beast);
+  }
+
+  .gradient-chill {
+    background: var(--gradient-chill);
+  }
+
+  .gradient-newbie {
+    background: var(--gradient-newbie);
+  }
+
+  .glow-primary {
+    box-shadow: 0 0 40px hsla(263, 70%, 58%, 0.4), 0 0 80px hsla(263, 70%, 58%, 0.2);
+  }
+
+  .glow-beast {
+    box-shadow: 0 0 30px hsla(0, 84%, 60%, 0.4);
+  }
+
+  .glow-chill {
+    box-shadow: 0 0 30px hsla(217, 91%, 60%, 0.4);
+  }
+
+  .glow-newbie {
+    box-shadow: 0 0 30px hsla(45, 93%, 47%, 0.4);
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-primary);
+  }
+
+  .neon-button {
+    @apply relative overflow-hidden;
+    background: var(--gradient-primary);
+    box-shadow: 0 0 20px hsla(263, 70%, 58%, 0.5), 0 0 40px hsla(217, 91%, 60%, 0.3);
+  }
+
+  .neon-button::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(135deg, hsla(263, 70%, 70%, 0.3) 0%, hsla(217, 91%, 70%, 0.3) 100%);
+  }
+
+  .neon-button:hover::before {
+    @apply opacity-100;
+  }
+}
+
+@layer utilities {
+  .animate-glow-pulse {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% {
+      box-shadow: 0 0 20px hsla(263, 70%, 58%, 0.5), 0 0 40px hsla(217, 91%, 60%, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 30px hsla(263, 70%, 58%, 0.7), 0 0 60px hsla(217, 91%, 60%, 0.5);
+    }
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+  }
+}
