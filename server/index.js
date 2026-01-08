@@ -5,8 +5,9 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const axios = require("axios");
 require("dotenv").config();
-
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const app = express();
+const { generateHackathonIdeas } = require("./services/aiService");
 
 // -------------------- MIDDLEWARE --------------------
 app.use(express.json());
@@ -220,6 +221,24 @@ app.post("/api/swipe", verifyToken, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Swipe failed" });
+  }
+});
+// 6. IDEA SPARK (AI) - Now connects directly to Gemini
+// 6. IDEA SPARK (AI) - Now uses aiService.js
+app.post("/api/idea-spark", async (req, res) => {
+  try {
+    const { mySkills, partnerSkills } = req.body;
+
+    // Call the dedicated service function
+    console.log(`🤖 Generating ideas for: ${mySkills} + ${partnerSkills}`);
+    const ideas = await generateHackathonIdeas(mySkills, partnerSkills);
+
+    res.status(200).json({ ideas });
+  } catch (error) {
+    console.error("Controller Error:", error.message);
+    res
+      .status(500)
+      .json({ message: "AI generation failed, please try again." });
   }
 });
 

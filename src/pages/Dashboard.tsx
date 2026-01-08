@@ -12,13 +12,10 @@ import {
   Check,
   X,
   MapPin,
-  ArrowRight,
   PanelRight,
-  PanelRightClose,
 } from "lucide-react";
 
 // --- FIXED IMPORTS ---
-// Ensure these paths match where your files actually are
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { MatchesSidebar } from "@/components/MatchesSidebar";
 import { SwipeCard } from "@/components/SwipeCard";
@@ -28,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MatchDialog } from "@/components/MatchDialog"; // ✅ IMPORTED NEW COMPONENT
 
 import { useAuth } from "@/context/AuthContext";
 
@@ -39,7 +37,6 @@ export interface UserProfile {
   role: string;
   bio: string;
   techStack: string[];
-  skills: string[];
   achievements: string[];
   avatarGradient: string;
   college: string;
@@ -69,8 +66,13 @@ const Dashboard = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [isCampusFilterActive, setIsCampusFilterActive] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
   const [exitDirection, setExitDirection] = useState<"left" | "right">("right");
+
+  // --- POPUP STATE (NEW) ---
+  const [matchPopupOpen, setMatchPopupOpen] = useState(false);
+  const [lastMatchedUser, setLastMatchedUser] = useState<UserProfile | null>(
+    null
+  );
 
   // --- GITHUB STATE ---
   const [showGithubModal, setShowGithubModal] = useState(false);
@@ -91,8 +93,7 @@ const Dashboard = () => {
   >([]);
   const [loading, setLoading] = useState(true);
 
-  // --- 🔥 1. LOAD PROFILE (FIXES ANONYMOUS ISSUE) ---
-  // We read from localStorage because the Login API saved it there
+  // --- 1. LOAD PROFILE ---
   const myProfile = {
     name:
       localStorage.getItem("userName") || userEmail?.split("@")[0] || "User",
@@ -109,7 +110,7 @@ const Dashboard = () => {
     if (savedAvatar) setUserAvatar(savedAvatar);
   }, []);
 
-  // --- 2. FETCH USERS (FEED) ---
+  // --- 2. FETCH USERS ---
   const fetchUsers = useCallback(async () => {
     if (!token) {
       setLoading(false);
@@ -122,14 +123,13 @@ const Dashboard = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // 🔥 CRITICAL FIX: MAP DB DATA (skills) TO UI DATA (techStack)
       const mappedUsers = response.data.map((u: any) => ({
-        id: u._id, // Map MongoDB _id to id
+        id: u._id,
         name: u.name || "Anonymous Hacker",
         role: u.role || "Developer",
         college: u.college || "Unknown College",
         bio: u.bio || "Ready to code.",
-        techStack: u.skills || [], // Fixes "join of undefined" crash
+        techStack: u.skills || [],
         achievements: [],
         avatarGradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
         stats: {
@@ -148,11 +148,10 @@ const Dashboard = () => {
     }
   }, [token]);
 
-  // --- 3. FETCH MATCHES (SIDEBAR) ---
+  // --- 3. FETCH MATCHES ---
   const fetchMatches = useCallback(async () => {
     if (!token) return;
     try {
-      // NOTE: Ensure your backend has the /api/matches route!
       const response = await axios.get("http://localhost:5000/api/matches", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -171,12 +170,10 @@ const Dashboard = () => {
 
       setMatches(mappedMatches);
     } catch (error) {
-      // Silent fail if route doesn't exist yet
       console.log("Matches fetch skipped or failed");
     }
   }, [token]);
 
-  // Initial Data Load
   useEffect(() => {
     fetchUsers();
     fetchMatches();
@@ -185,7 +182,6 @@ const Dashboard = () => {
   // --- 4. FILTER LOGIC ---
   useEffect(() => {
     let filtered = allUsers;
-
     if (activeFilter !== "All") {
       filtered = filtered.filter((user) => {
         const roleMatch = user.role
@@ -197,24 +193,21 @@ const Dashboard = () => {
         return roleMatch || techMatch;
       });
     }
-
     if (isCampusFilterActive) {
       filtered = filtered.filter((user) =>
         user.college?.toLowerCase().includes(myProfile.college.toLowerCase())
       );
     }
-
     setUsers(filtered);
   }, [activeFilter, isCampusFilterActive, allUsers, myProfile.college]);
 
-  // --- 5. SWIPE HANDLER ---
+  // --- 5. SWIPE HANDLER (UPDATED FOR POPUP) ---
   const handleSwipe = async (direction: "left" | "right") => {
     setExitDirection(direction);
     const currentUser = users[0];
 
     if (!currentUser) return;
 
-    // Optimistic UI Update
     setTimeout(() => {
       setUsers((prev) => prev.slice(1));
     }, 200);
@@ -234,7 +227,9 @@ const Dashboard = () => {
       );
 
       if (res.data.match) {
-        alert(`🔥 IT'S A MATCH! You and ${currentUser.name} are connected.`);
+        // 🎉 NEW: Trigger Popup instead of Alert
+        setLastMatchedUser(currentUser);
+        setMatchPopupOpen(true);
         setMatches((prev) => [currentUser, ...prev]);
       } else {
         setSentRequests((prev) => [...prev, currentUser]);
@@ -267,7 +262,6 @@ const Dashboard = () => {
     e.preventDefault();
     if (!githubInput) return;
     setGithubStatus("loading");
-
     setTimeout(() => {
       let url = githubInput;
       if (!url.startsWith("http")) {
@@ -607,6 +601,17 @@ const Dashboard = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* 🔥 NEW MATCH POPUP COMPONENT INSERTED HERE 🔥 */}
+      <MatchDialog
+        isOpen={matchPopupOpen}
+        onClose={() => setMatchPopupOpen(false)}
+        matchedUser={lastMatchedUser}
+        currentUserImage={
+          userAvatar ||
+          `https://api.dicebear.com/7.x/initials/svg?seed=${myProfile.name}`
+        }
+      />
     </div>
   );
 };

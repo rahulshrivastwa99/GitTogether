@@ -21,7 +21,7 @@ class IdeaRequest(BaseModel):
 @app.post("/generate-ideas")
 async def generate_ideas(req: IdeaRequest):
     try:
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-flash-latest')
 
         prompt = f"""
         Act as a Hackathon Mentor.
