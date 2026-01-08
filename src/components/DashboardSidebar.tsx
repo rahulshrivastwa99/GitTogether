@@ -7,7 +7,6 @@ import {
   Search,
   Lightbulb,
   Trophy,
-  CalendarDays,
   FileText,
   BarChart3,
   LogOut,
@@ -27,7 +26,6 @@ const navItems = [
   { icon: BarChart3, label: "Team Balance", path: "/dashboard/team-analysis" },
   { icon: Trophy, label: "Hackathons", path: "/dashboard/hackathons" },
   { icon: FileText, label: "Team Contract", path: "/dashboard/contract" },
-  { icon: CalendarDays, label: "Calendar", path: "/dashboard/calendar" },
   { icon: Lightbulb, label: "Idea Spark", path: "/dashboard/ideas" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];
