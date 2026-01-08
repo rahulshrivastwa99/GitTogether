@@ -3,6 +3,8 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const http = require("http"); // 🔥 IMPORT HTTP
+const { Server } = require("socket.io"); // 🔥 IMPORT SOCKET.IO
 const axios = require("axios");
 require("dotenv").config();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -17,7 +19,14 @@ const Calendar = require("./models/calendar");
 // -------------------- MIDDLEWARE --------------------
 app.use(express.json());
 app.use(cors());
-
+//---------- SOCKET.IO SETUP --------------------
+const server = http.createServer(app); // Wrap App in HTTP Server
+const io = new Server(server, {
+  cors: {
+    origin: "*", // Allow all origins (Frontend URL)
+    methods: ["GET", "POST"],
+  },
+});
 // -------------------- MONGODB --------------------
 mongoose
   .connect(process.env.MONGO_URI)
