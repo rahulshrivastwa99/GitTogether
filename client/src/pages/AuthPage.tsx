@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner"; // ✅ Using Sonner for Toasts
 import API_BASE_URL from "@/lib/api";
 
 import axios from "axios";
@@ -49,21 +50,28 @@ export default function AuthPage() {
 
         const data = response.data;
 
-        // ✅ SAFETY CHECK (MOST IMPORTANT LINE)
+        // ✅ SAFETY CHECK
         if (!data?.user || !data?.token) {
-          setError(data?.message || "Invalid login credentials");
-          return;
+          throw new Error(data?.message || "Invalid login credentials");
         }
 
         // 1. Update Context
         login(data.token, data.user.email, data.user.isOnboarded);
 
-        // 2. 🔥 SAVE DETAILS TO STORAGE (So Dashboard sees "Rahul" not "Anonymous")
+        // 2. 🔥 SAVE DETAILS TO STORAGE
         localStorage.setItem("userName", data.user.name || "");
         localStorage.setItem("userCollege", data.user.college || "");
         localStorage.setItem("userRole", data.user.role || "");
 
-        // 3. Redirect based on status
+        // 3. 🔥 SAVE AVATAR IF EXISTS
+        if (data.user.avatarGradient) {
+          localStorage.setItem("userAvatar", data.user.avatarGradient);
+        }
+
+        // 4. Success Toast
+        toast.success("Welcome back! 🚀");
+
+        // 5. Redirect based on status
         if (data.user.isOnboarded) {
           navigate("/dashboard");
         } else {
@@ -77,19 +85,24 @@ export default function AuthPage() {
           password: formData.password,
         });
 
-        alert("Account created! Please login.");
+        // 🔥 Replaced Alert with Toast
+        toast.success("Account created successfully! Please login.");
         setIsLogin(true);
       }
     } catch (err: any) {
       console.error("Auth Error:", err);
-      setError(err.response?.data?.message || "Connection failed.");
+      const errorMessage =
+        err.response?.data?.message || err.message || "Connection failed.";
+
+      // Update UI Error state AND show Toast
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    // ... (Keep your existing JSX return exactly as it was)
     <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-primary/20 rounded-full blur-[120px]" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-purple-500/20 rounded-full blur-[120px]" />

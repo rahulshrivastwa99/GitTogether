@@ -416,6 +416,63 @@ app.get("/api/messages/:partnerId", verifyToken, async (req, res) => {
   }
 });
 
+// 9. GET MY PROFILE (For Settings Page)
+app.get("/api/user/me", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: "Fetch failed" });
+  }
+});
+
+// 10. UPDATE PROFILE
+app.put("/api/user/update", verifyToken, async (req, res) => {
+  try {
+    const updates = req.body;
+
+    // Prevent updating sensitive fields like password or email directly here
+    delete updates.password;
+    delete updates.email;
+    delete updates._id;
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updates },
+      { new: true } // Return the updated document
+    );
+
+    res.json({ message: "Profile updated successfully", user });
+  } catch (error) {
+    console.error("Update Error:", error);
+    res.status(500).json({ message: "Update failed" });
+  }
+});
+
+// 11. UNMATCH USER (REMOVE TEAMMATE)
+app.delete("/api/matches/:id", verifyToken, async (req, res) => {
+  try {
+    const partnerId = req.params.id;
+    const myId = req.user.id;
+
+    // 1. Remove partner from MY lists
+    await User.findByIdAndUpdate(myId, {
+      $pull: { matches: partnerId, swipedRight: partnerId },
+    });
+
+    // 2. Remove ME from PARTNER'S lists (Mutual unmatch)
+    await User.findByIdAndUpdate(partnerId, {
+      $pull: { matches: myId, swipedRight: myId },
+    });
+
+    res.json({ message: "Unmatched successfully" });
+  } catch (error) {
+    console.error("Unmatch Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () =>
   console.log(`🚀 Server running on port ${PORT} with Socket.io`)

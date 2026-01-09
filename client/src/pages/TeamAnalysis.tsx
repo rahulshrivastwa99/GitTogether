@@ -1,131 +1,136 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
+import {
+  TrendingUp,
   Users,
-  Plus,
-  Trash2,
-  CheckCircle2,
   AlertTriangle,
-  XCircle,
-  BarChart3,
-  Code,
-  PenTool,
-  Mic,
-  BrainCircuit,
-  Megaphone,
+  CheckCircle2,
+  Zap,
+  Loader2,
+  Trash2,
+  Settings2,
 } from "lucide-react";
+import axios from "axios";
+import { toast } from "sonner"; // ✅ Added Toast
+import { useAuth } from "@/context/AuthContext";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import API_BASE_URL from "@/lib/api";
 
 // --- TYPES ---
-type RoleType =
-  | "Frontend"
-  | "Backend"
-  | "AI/ML"
-  | "Design"
-  | "Product"
-  | "Pitching";
-
-interface TeamMember {
-  id: number;
+interface Teammate {
+  _id: string; // Ensure we have the ID for deletion
+  id?: string;
   name: string;
-  role: RoleType;
+  role: string;
+  skills: string[];
 }
 
-// --- ANALYSIS LOGIC ---
-const analyzeTeam = (members: TeamMember[]) => {
-  const counts = {
-    Frontend: 0,
-    Backend: 0,
-    "AI/ML": 0,
-    Design: 0,
-    Product: 0,
-    Pitching: 0,
-  };
-
-  members.forEach((m) => counts[m.role]++);
-
-  const techCount = counts.Frontend + counts.Backend + counts["AI/ML"];
-  const designCount = counts.Design;
-  const pitchCount = counts.Pitching + counts.Product;
-  const total = members.length;
-
-  let status: "Balanced" | "Warning" | "Critical" = "Balanced";
-  let message = "Your team is perfectly optimized for the hackathon!";
-  let missing: string[] = [];
-
-  if (total === 0) {
-    status = "Critical";
-    message = "Your team is empty. Add members to start analysis.";
-  } else if (pitchCount === 0) {
-    status = "Critical";
-    message = "No Presenter! You will build a great product but fail the demo.";
-    missing.push("Pitcher/Product Manager");
-  } else if (designCount === 0) {
-    status = "Warning";
-    message = "Missing Designer. Your UI might look engineered, not designed.";
-    missing.push("UI/UX Designer");
-  } else if (techCount === total) {
-    status = "Warning";
-    message = "Too many developers. Who is working on the pitch deck?";
-    missing.push("Pitcher", "Designer");
-  } else if (techCount === 0) {
-    status = "Critical";
-    message = "No Builders! You have ideas but no code.";
-    missing.push("Developers");
-  }
-
-  return { status, message, counts, missing };
-};
-
 export default function TeamAnalysis() {
+  const { token } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Initial Mock Team
-  const [members, setMembers] = useState<TeamMember[]>([
-    { id: 1, name: "Madhav Kalra", role: "Frontend" },
-    { id: 2, name: "Amit Shah", role: "Backend" },
-  ]);
+  // --- TEAM STATE ---
+  const [teamScore, setTeamScore] = useState(0);
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [matches, setMatches] = useState<Teammate[]>([]);
 
-  const [newName, setNewName] = useState("");
-  const [newRole, setNewRole] = useState<RoleType>("Frontend");
+  // --- MANAGE STATE ---
+  const [isManaging, setIsManaging] = useState(false); // 🔥 Toggle for Delete Buttons
 
-  const analysis = analyzeTeam(members);
+  // --- 1. FETCH & CALCULATE DATA ---
+  useEffect(() => {
+    fetchData();
+  }, [token]);
 
-  const addMember = () => {
-    if (!newName) return;
-    setMembers([...members, { id: Date.now(), name: newName, role: newRole }]);
-    setNewName("");
+  const fetchData = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/matches`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const teammates: Teammate[] = res.data;
+      setMatches(teammates);
+      calculateStats(teammates);
+    } catch (error) {
+      console.error("Analysis Failed", error);
+      toast.error("Failed to load team data");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const removeMember = (id: number) => {
-    setMembers(members.filter((m) => m.id !== id));
+  const calculateStats = (teammates: Teammate[]) => {
+    // 1. Define base stats
+    const stats = {
+      Frontend: 30,
+      Backend: 20,
+      Design: 10,
+      DevOps: 10,
+      AI: 10,
+      Communication: 50,
+    };
+
+    // 2. Loop through matches and boost stats
+    teammates.forEach((mate) => {
+      const role = mate.role ? mate.role.toLowerCase() : "";
+      const skills = mate.skills ? mate.skills.join(" ").toLowerCase() : "";
+
+      if (role.includes("frontend") || skills.includes("react"))
+        stats.Frontend += 30;
+      if (role.includes("backend") || skills.includes("node"))
+        stats.Backend += 30;
+      if (role.includes("design") || skills.includes("figma"))
+        stats.Design += 30;
+      if (role.includes("devops") || skills.includes("aws")) stats.DevOps += 30;
+      if (role.includes("ai") || skills.includes("python")) stats.AI += 30;
+      stats.Communication += 10;
+    });
+
+    // 3. Normalize Data
+    const finalData = Object.keys(stats).map((key) => ({
+      subject: key,
+      A: Math.min(stats[key as keyof typeof stats], 100),
+      fullMark: 100,
+    }));
+
+    setChartData(finalData);
+    const total = finalData.reduce((acc, curr) => acc + curr.A, 0);
+    setTeamScore(Math.round(total / finalData.length));
   };
 
-  const getRoleIcon = (role: RoleType) => {
-    switch (role) {
-      case "Frontend":
-      case "Backend":
-        return <Code className="w-4 h-4" />;
-      case "AI/ML":
-        return <BrainCircuit className="w-4 h-4" />;
-      case "Design":
-        return <PenTool className="w-4 h-4" />;
-      case "Pitching":
-        return <Mic className="w-4 h-4" />;
-      case "Product":
-        return <Megaphone className="w-4 h-4" />;
+  // --- 2. HANDLE REMOVE TEAMMATE ---
+  const handleRemoveMember = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this teammate?")) return;
+
+    try {
+      // Optimistic UI Update
+      const updatedMatches = matches.filter((m) => (m._id || m.id) !== id);
+      setMatches(updatedMatches);
+      calculateStats(updatedMatches); // Recalculate graph immediately
+
+      // Backend Call
+      await axios.delete(`${API_BASE_URL}/api/matches/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      toast.success("Teammate removed.");
+    } catch (error) {
+      console.error("Remove failed", error);
+      toast.error("Failed to remove teammate.");
+      fetchData(); // Revert on error
     }
   };
 
@@ -137,227 +142,218 @@ export default function TeamAnalysis() {
         onSearchClick={() => {}}
       />
 
-      <main className="flex-1 flex flex-col h-full overflow-y-auto p-6 md:p-8 bg-muted/10">
-        <div className="max-w-6xl mx-auto w-full">
+      <main className="flex-1 overflow-y-auto p-6 md:p-12 relative">
+        <div className="max-w-6xl mx-auto">
+          {/* HEADER */}
           <div className="mb-8">
-            <h1 className="text-3xl font-extrabold flex items-center gap-3">
-              <BarChart3 className="w-8 h-8 text-primary" /> Smart Team Balance
+            <h1 className="text-3xl font-bold flex items-center gap-3">
+              <TrendingUp className="w-8 h-8 text-green-500" />
+              Team Analysis
             </h1>
             <p className="text-muted-foreground mt-2">
-              AI-powered analysis to ensure you have all the skills needed to
-              win.
+              AI-driven insights on your squad's technical balance.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* LEFT COLUMN: TEAM MANAGEMENT */}
-            <div className="lg:col-span-2 space-y-6">
-              <Card className="p-6 border-border shadow-md">
-                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                  <Users className="w-5 h-5 text-blue-500" /> Current Squad
-                </h3>
+          {loading ? (
+            <div className="flex h-64 items-center justify-center">
+              <Loader2 className="w-10 h-10 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* LEFT: CHART */}
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="lg:col-span-2"
+              >
+                <Card className="p-6 border-border/50 bg-card/50 backdrop-blur-sm h-[500px] relative overflow-hidden flex flex-col items-center justify-center shadow-lg">
+                  <h3 className="absolute top-6 left-6 font-bold text-lg">
+                    Skill Distribution
+                  </h3>
 
-                <div className="space-y-3 mb-6">
-                  {members.map((member) => (
-                    <motion.div
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      key={member.id}
-                      className="flex items-center justify-between p-3 rounded-xl bg-muted/40 border border-border/50"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div
-                          className={`p-2 rounded-full ${
-                            member.role === "Design"
-                              ? "bg-pink-500/10 text-pink-500"
-                              : member.role === "Pitching"
-                              ? "bg-orange-500/10 text-orange-500"
-                              : "bg-blue-500/10 text-blue-500"
-                          }`}
-                        >
-                          {getRoleIcon(member.role)}
-                        </div>
-                        <div>
-                          <p className="font-bold">{member.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {member.role}
-                          </p>
-                        </div>
-                      </div>
+                  <div className="w-full h-full max-w-md">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RadarChart
+                        cx="50%"
+                        cy="50%"
+                        outerRadius="80%"
+                        data={chartData}
+                      >
+                        <PolarGrid stroke="#374151" />
+                        <PolarAngleAxis
+                          dataKey="subject"
+                          tick={{ fill: "#9CA3AF", fontSize: 12 }}
+                        />
+                        <PolarRadiusAxis
+                          angle={30}
+                          domain={[0, 100]}
+                          tick={false}
+                          axisLine={false}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "#1f2937",
+                            border: "none",
+                            borderRadius: "8px",
+                            color: "#fff",
+                          }}
+                          itemStyle={{ color: "#fff" }}
+                        />
+                        <Radar
+                          name="Team Strength"
+                          dataKey="A"
+                          stroke="#8b5cf6"
+                          strokeWidth={3}
+                          fill="#8b5cf6"
+                          fillOpacity={0.4}
+                        />
+                      </RadarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+              </motion.div>
+
+              {/* RIGHT: METRICS */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-6"
+              >
+                {/* Score Card */}
+                <Card className="p-6 border-primary/20 bg-gradient-to-br from-primary/10 to-transparent shadow-md">
+                  <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                    Squad Score
+                  </h3>
+                  <div className="flex items-end gap-2">
+                    <span className="text-5xl font-black text-primary">
+                      {teamScore}
+                    </span>
+                    <span className="text-xl text-muted-foreground mb-1">
+                      / 100
+                    </span>
+                  </div>
+                  <div className="mt-4">
+                    {teamScore > 70 ? (
+                      <Badge className="bg-green-500/20 text-green-400 border-green-500/50 px-3 py-1">
+                        <Zap className="w-4 h-4 mr-2" /> Hackathon Ready
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/50 px-3 py-1">
+                        <AlertTriangle className="w-4 h-4 mr-2" /> Needs Balance
+                      </Badge>
+                    )}
+                  </div>
+                </Card>
+
+                {/* 🔥 TEAM ROSTER WITH MANAGE BUTTON 🔥 */}
+                <Card className="p-6 shadow-md">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-lg flex items-center gap-2">
+                      <Users className="w-5 h-5 text-blue-500" /> Roster
+                    </h3>
+                    {matches.length > 0 && (
                       <Button
                         variant="ghost"
-                        size="icon"
-                        onClick={() => removeMember(member.id)}
-                        className="text-muted-foreground hover:text-destructive"
+                        size="sm"
+                        onClick={() => setIsManaging(!isManaging)}
+                        className={
+                          isManaging
+                            ? "text-primary bg-primary/10"
+                            : "text-muted-foreground"
+                        }
                       >
-                        <Trash2 className="w-4 h-4" />
+                        {isManaging ? "Done" : "Manage"}
                       </Button>
-                    </motion.div>
-                  ))}
-                  {members.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground italic border-2 border-dashed rounded-xl">
-                      Add members to see analysis
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex gap-2 items-end border-t pt-4">
-                  <div className="flex-1 space-y-2">
-                    <span className="text-xs font-semibold ml-1">
-                      New Member Name
-                    </span>
-                    <Input
-                      placeholder="e.g. Sarah Connor"
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                    />
+                    )}
                   </div>
-                  <div className="w-[140px] space-y-2">
-                    <span className="text-xs font-semibold ml-1">Role</span>
-                    <Select
-                      onValueChange={(v: RoleType) => setNewRole(v)}
-                      defaultValue="Frontend"
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/50">
+                      <span className="font-medium text-sm">You</span>
+                      <Badge variant="outline" className="text-xs">
+                        Owner
+                      </Badge>
+                    </div>
+
+                    <AnimatePresence>
+                      {matches.length > 0 ? (
+                        matches.map((mate) => (
+                          <motion.div
+                            key={mate._id || mate.id}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/20 transition-colors"
+                          >
+                            <div className="flex flex-col">
+                              <span className="font-medium text-sm">
+                                {mate.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {mate.role}
+                              </span>
+                            </div>
+
+                            {/* 🔥 DELETE BUTTON APPEARS IN EDIT MODE */}
+                            {isManaging ? (
+                              <Button
+                                size="icon"
+                                variant="destructive"
+                                className="h-8 w-8"
+                                onClick={() =>
+                                  handleRemoveMember(mate._id || mate.id)
+                                }
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            ) : (
+                              <Settings2 className="w-4 h-4 text-muted-foreground opacity-50" />
+                            )}
+                          </motion.div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic text-center py-4">
+                          No teammates yet.
+                        </p>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {matches.length === 0 && (
+                    <Button
+                      className="w-full mt-4"
+                      variant="outline"
+                      onClick={() => (window.location.href = "/dashboard")}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Frontend">Frontend</SelectItem>
-                        <SelectItem value="Backend">Backend</SelectItem>
-                        <SelectItem value="AI/ML">AI / ML</SelectItem>
-                        <SelectItem value="Design">UI Design</SelectItem>
-                        <SelectItem value="Product">Product</SelectItem>
-                        <SelectItem value="Pitching">Pitching</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button onClick={addMember} className="gap-2 bg-primary">
-                    <Plus className="w-4 h-4" /> Add
-                  </Button>
-                </div>
-              </Card>
+                      Find Teammates
+                    </Button>
+                  )}
+                </Card>
+
+                {/* Insights */}
+                <Card className="p-6 shadow-md">
+                  <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-yellow-500" /> Insights
+                  </h3>
+                  <ul className="space-y-3 text-sm text-muted-foreground">
+                    {chartData.find((d) => d.subject === "Backend")?.A < 50 && (
+                      <li className="flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 shrink-0" />
+                        <span>Weak Backend. Find a Node.js dev.</span>
+                      </li>
+                    )}
+                    {teamScore > 60 && (
+                      <li className="flex items-start gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                        <span>Good communication coverage.</span>
+                      </li>
+                    )}
+                  </ul>
+                </Card>
+              </motion.div>
             </div>
-
-            {/* RIGHT COLUMN: AI ANALYSIS */}
-            <div className="space-y-6">
-              <Card
-                className={`p-6 border-2 shadow-xl ${
-                  analysis.status === "Balanced"
-                    ? "border-green-500/50 bg-green-500/5"
-                    : analysis.status === "Warning"
-                    ? "border-yellow-500/50 bg-yellow-500/5"
-                    : "border-red-500/50 bg-red-500/5"
-                }`}
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  {analysis.status === "Balanced" && (
-                    <CheckCircle2 className="w-8 h-8 text-green-600" />
-                  )}
-                  {analysis.status === "Warning" && (
-                    <AlertTriangle className="w-8 h-8 text-yellow-600" />
-                  )}
-                  {analysis.status === "Critical" && (
-                    <XCircle className="w-8 h-8 text-red-600" />
-                  )}
-                  <div>
-                    <h2 className="text-xl font-bold uppercase tracking-wide">
-                      {analysis.status} Team
-                    </h2>
-                    <p className="text-xs opacity-80 font-medium">
-                      AI Assessment
-                    </p>
-                  </div>
-                </div>
-
-                <p className="text-sm font-medium leading-relaxed mb-4">
-                  {analysis.message}
-                </p>
-
-                {analysis.missing.length > 0 && (
-                  <div className="bg-background/80 p-3 rounded-lg border border-border/50">
-                    <span className="text-xs font-bold text-muted-foreground uppercase">
-                      Critical Gaps:
-                    </span>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {analysis.missing.map((role) => (
-                        <Badge
-                          key={role}
-                          variant="destructive"
-                          className="text-[10px]"
-                        >
-                          {role}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </Card>
-
-              {/* SKILL DISTRIBUTION */}
-              <Card className="p-6">
-                <h3 className="font-bold text-sm text-muted-foreground uppercase mb-4">
-                  Skill Distribution
-                </h3>
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span>Tech (Devs)</span>
-                      <span>
-                        {analysis.counts.Frontend +
-                          analysis.counts.Backend +
-                          analysis.counts["AI/ML"]}
-                      </span>
-                    </div>
-                    <Progress
-                      value={
-                        ((analysis.counts.Frontend +
-                          analysis.counts.Backend +
-                          analysis.counts["AI/ML"]) /
-                          Math.max(members.length, 1)) *
-                        100
-                      }
-                      className="h-2 bg-blue-100 dark:bg-blue-900"
-                      indicatorColor="bg-blue-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span>Design (UI/UX)</span>
-                      <span>{analysis.counts.Design}</span>
-                    </div>
-                    <Progress
-                      value={
-                        (analysis.counts.Design / Math.max(members.length, 1)) *
-                        100
-                      }
-                      className="h-2 bg-pink-100 dark:bg-pink-900"
-                      indicatorColor="bg-pink-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs">
-                      <span>Pitching (Sales)</span>
-                      <span>
-                        {analysis.counts.Pitching + analysis.counts.Product}
-                      </span>
-                    </div>
-                    <Progress
-                      value={
-                        ((analysis.counts.Pitching + analysis.counts.Product) /
-                          Math.max(members.length, 1)) *
-                        100
-                      }
-                      className="h-2 bg-orange-100 dark:bg-orange-900"
-                      indicatorColor="bg-orange-500"
-                    />
-                  </div>
-                </div>
-              </Card>
-            </div>
-          </div>
+          )}
         </div>
       </main>
     </div>

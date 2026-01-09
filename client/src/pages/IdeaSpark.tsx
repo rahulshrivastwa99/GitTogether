@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner"; // ✅ Added Toast
 import {
   Sparkles,
   Lightbulb,
@@ -17,9 +18,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import API_BASE_URL from "@/lib/api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ScrollArea } from "@/components/ui/scroll-area"; // Ensure you have this or standard div
+import API_BASE_URL from "@/lib/api";
 
 // --- CONFIGURATION ---
 const BACKEND_URL = `${API_BASE_URL}`;
@@ -34,7 +34,7 @@ interface ProjectIdea {
   difficulty: string;
 }
 
-// --- UPDATED FALLBACK IDEAS (With details) ---
+// --- MOCK DATA ---
 const MOCK_IDEAS: ProjectIdea[] = [
   {
     title: "EcoSmart Tracker",
@@ -93,7 +93,10 @@ const IdeaSpark = () => {
   const [selectedIdea, setSelectedIdea] = useState<ProjectIdea | null>(null);
 
   const handleGenerate = async () => {
-    if (!mySkills) return;
+    if (!mySkills) {
+      toast.info("Please enter your skills first!");
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -119,8 +122,11 @@ const IdeaSpark = () => {
 
       const data = await response.json();
       setIdeas(data.ideas);
+      toast.success("Ideas generated successfully! 💡");
     } catch (err: any) {
       console.error("Backend API Failed, switching to fallback:", err);
+      toast.warning("AI is offline. Loading demo ideas."); // 🔥 Warning Toast
+
       await new Promise((r) => setTimeout(r, 1000));
       setIdeas(MOCK_IDEAS);
       setUsedFallback(true);

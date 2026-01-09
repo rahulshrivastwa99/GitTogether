@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner"; // ✅ Added Toast
 import {
   Upload,
   ArrowRight,
@@ -74,7 +75,7 @@ const modes = [
 
 const Onboarding = () => {
   const navigate = useNavigate();
-  const { token, completeOnboarding } = useAuth(); // 🔥 Using Auth Context
+  const { token, completeOnboarding } = useAuth();
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -82,41 +83,38 @@ const Onboarding = () => {
   const [selectedTech, setSelectedTech] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
-  // --- PROFILE DATA STATE (Captured in Step 1) ---
+  // --- PROFILE DATA STATE ---
   const [profileData, setProfileData] = useState({
     name: "",
     college: "",
     bio: "",
-    role: "Frontend", // Default value
+    role: "Frontend",
   });
 
-  // Toggle Tech Stack Selection
   const handleTechToggle = (tech: string) => {
     setSelectedTech((prev) =>
       prev.includes(tech) ? prev.filter((t) => t !== tech) : [...prev, tech]
     );
   };
 
-  // Validation Logic
   const canProceed = () => {
     if (step === 1)
       return profileData.name.length > 0 && profileData.college.length > 0;
-    if (step === 2) return true; // Resume is optional
+    if (step === 2) return true;
     if (step === 3) return selectedMode !== null;
     if (step === 4) return selectedTech.length > 0;
     return false;
   };
 
-  // --- FINAL SUBMIT: SAVES TO DATABASE ---
+  // --- FINAL SUBMIT ---
   const handleProfileSubmit = async () => {
     setLoading(true);
     try {
       if (!token) {
-        alert("Error: User not logged in.");
+        toast.error("User not logged in. Please refresh.");
         return;
       }
 
-      // 🔥 Sending Data to Backend to replace "Anonymous"
       const response = await fetch(`${BACKEND_URL}/api/onboarding`, {
         method: "POST",
         headers: {
@@ -136,14 +134,16 @@ const Onboarding = () => {
 
       if (!response.ok) throw new Error("Failed to save profile");
 
-      // ✅ Update Context so App knows we are onboarded
       completeOnboarding();
 
-      // ✅ Redirect to Dashboard
+      // 🔥 Success Toast
+      toast.success("Profile setup complete! Welcome aboard 🚀");
+
       navigate("/dashboard");
     } catch (error) {
       console.error("Failed to save profile:", error);
-      alert("Failed to save profile. Please try again.");
+      // 🔥 Error Toast
+      toast.error("Failed to save profile. Please try again.");
     } finally {
       setLoading(false);
     }
