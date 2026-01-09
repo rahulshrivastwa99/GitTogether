@@ -23,10 +23,10 @@ interface DashboardSidebarProps {
 
 const navItems = [
   { icon: Users, label: "Matches", path: "/dashboard" },
-  { icon: BarChart3, label: "Team Balance", path: "/dashboard/team-analysis" },
   { icon: Trophy, label: "Hackathons", path: "/dashboard/hackathons" },
-  { icon: FileText, label: "Team Contract", path: "/dashboard/contract" },
   { icon: Lightbulb, label: "Idea Spark", path: "/dashboard/ideas" },
+  { icon: BarChart3, label: "Team Balance", path: "/dashboard/team-analysis" },
+  { icon: FileText, label: "Team Contract", path: "/dashboard/contract" },
   { icon: Settings, label: "Settings", path: "/dashboard/settings" },
 ];
 
@@ -51,11 +51,10 @@ export const DashboardSidebar = ({
         collapsed ? "w-16" : "w-64"
       )}
     >
-      {/* HEADER WITH WORKING LOGO */}
+      {/* HEADER */}
       <div className="h-16 border-b border-border flex items-center justify-between px-4">
         {!collapsed && (
           <div className="flex items-center gap-2">
-            {/* FIXED: Simple SVG as background-image */}
             <div
               className="w-8 h-8 rounded-xl flex-shrink-0 bg-gradient-to-br from-gray-800 to-black"
               style={{
@@ -75,43 +74,35 @@ export const DashboardSidebar = ({
           className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition-colors ml-auto"
         >
           {collapsed ? (
-            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            <ChevronRight className="w-5 h-5" />
           ) : (
-            <ChevronLeft className="w-5 h-5 text-muted-foreground" />
+            <ChevronLeft className="w-5 h-5" />
           )}
         </button>
       </div>
 
       {/* NAVIGATION LINKS */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {navItems.slice(0, 1).map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            end={item.path === "/dashboard"}
-            className={itemClasses}
-            activeClassName="bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
-          >
-            <item.icon className="w-5 h-5 flex-shrink-0 group-hover:text-primary transition-colors" />
-            {!collapsed && <span className="font-medium">{item.label}</span>}
-          </NavLink>
-        ))}
+        {navItems.map((item, index) => (
+          <div key={item.path}>
+            {/* Insert Search button after the first item (Matches) */}
+            {index === 1 && (
+              <button onClick={onSearchClick} className={itemClasses}>
+                <Search className="w-5 h-5 flex-shrink-0 group-hover:text-primary transition-colors" />
+                {!collapsed && <span className="font-medium">Search</span>}
+              </button>
+            )}
 
-        <button onClick={onSearchClick} className={itemClasses}>
-          <Search className="w-5 h-5 flex-shrink-0 group-hover:text-primary transition-colors" />
-          {!collapsed && <span className="font-medium">Search</span>}
-        </button>
-
-        {navItems.slice(1).map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={itemClasses}
-            activeClassName="bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
-          >
-            <item.icon className="w-5 h-5 flex-shrink-0 group-hover:text-primary transition-colors" />
-            {!collapsed && <span className="font-medium">{item.label}</span>}
-          </NavLink>
+            <NavLink
+              to={item.path}
+              end={item.path === "/dashboard"}
+              className={itemClasses}
+              activeClassName="bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary"
+            >
+              <item.icon className="w-5 h-5 flex-shrink-0 group-hover:text-primary transition-colors" />
+              {!collapsed && <span className="font-medium">{item.label}</span>}
+            </NavLink>
+          </div>
         ))}
       </nav>
 

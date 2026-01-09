@@ -9,6 +9,7 @@ const axios = require("axios");
 require("dotenv").config();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const app = express();
+// const Team = require("./models/team"); // Add this near other model imports
 const {
   generateHackathonIdeas,
   fetchAIGeneratedHackathons,
@@ -16,6 +17,8 @@ const {
 const { findHackathons } = require("./services/findHack"); // <-- Add this line
 // const { generateHackathonIdeas } = require("./services/aiService");
 const Calendar = require("./models/calendar");
+const Agreement = require("./models/agreement");
+
 // -------------------- MIDDLEWARE --------------------
 app.use(express.json());
 app.use(cors());
@@ -65,6 +68,57 @@ const messageSchema = new mongoose.Schema({
 });
 
 const Message = mongoose.model("Message", messageSchema);
+
+// -------------------- EVENT SCHEMA --------------------
+const eventSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  title: { type: String, required: true },
+  date: { type: Date, required: true },
+  type: {
+    type: String,
+    enum: ["Hackathon", "Meeting", "Deadline"],
+    default: "Deadline",
+  },
+  description: { type: String },
+});
+
+const Event = mongoose.model("Event", eventSchema);
+
+// -------------------- TEAM & AGREEMENT SCHEMA --------------------
+const teamSchema = new mongoose.Schema({
+  teamName: { type: String, required: true },
+  hackathonName: { type: String, required: true },
+  creator: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  members: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  createdAt: { type: Date, default: Date.now }, // Shared Member List
+  // Embedded Agreement (Shared by all members)
+  agreement: {
+    ipRule: { type: String, default: "opensource" },
+    decisionRule: { type: String, default: "majority" },
+    commitmentRule: { type: String, default: "balanced" },
+    status: {
+      type: String,
+      enum: ["Draft", "Locked", "Signed"],
+      default: "Draft",
+    },
+    signedMembers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Who has signed?
+    memberDetails: [
+      {
+        // Individual commitments
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        role: String,
+        hours: String,
+        responsibility: String,
+      },
+    ],
+  },
+});
+
+const Team = mongoose.models.Team || mongoose.model("Team", teamSchema);
 
 // -------------------- SOCKET.IO LOGIC --------------------
 io.on("connection", (socket) => {
@@ -137,59 +191,6 @@ const verifyToken = (req, res, next) => {
     res.status(403).json({ message: "Invalid token" });
   }
 };
-// -------------------- MY CALENDAR ROUTES --------------------
-
-// GET CALENDAR EVENTS
-app.get("/api/calendar", verifyToken, async (req, res) => {
-  try {
-    const events = await Calendar.find({ userId: req.user.id }).sort({
-      date: 1,
-    });
-    res.json(events);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to fetch calendar events" });
-  }
-});
-
-// ADD NOTE / EVENT
-// server/index.js
-// ADD TO CALENDAR
-app.post("/api/calendar", verifyToken, async (req, res) => {
-  try {
-    const { title, date, note, host, location, prize, description, link } =
-      req.body;
-
-    const event = new Calendar({
-      userId: req.user.id,
-      title,
-      date,
-      note,
-      host,
-      location,
-      prize,
-      description,
-      link,
-    });
-
-    await event.save();
-    res.json({ message: "Successfully added to calendar" });
-  } catch (error) {
-    res.status(500).json({ message: "Failed to save event" });
-  }
-});
-
-// DELETE FROM CALENDAR
-app.delete("/api/calendar/:id", verifyToken, async (req, res) => {
-  try {
-    await Calendar.findOneAndDelete({
-      _id: req.params.id,
-      userId: req.user.id,
-    });
-    res.json({ message: "Event deleted" });
-  } catch (error) {
-    res.status(500).json({ message: "Failed to delete event" });
-  }
-});
 
 // -------------------- ROUTES --------------------
 
@@ -347,35 +348,6 @@ app.post("/api/swipe", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Swipe failed" });
   }
 });
-// 6. IDEA SPARK (AI) - Now connects directly to Gemini
-// 6. IDEA SPARK (AI) - Now uses aiService.js
-app.post("/api/idea-spark", async (req, res) => {
-  try {
-    const { mySkills, partnerSkills } = req.body;
-
-    // Call the dedicated service function
-    console.log(`🤖 Generating ideas for: ${mySkills} + ${partnerSkills}`);
-    const ideas = await generateHackathonIdeas(mySkills, partnerSkills);
-
-    res.status(200).json({ ideas });
-  } catch (error) {
-    console.error("Controller Error:", error.message);
-    res
-      .status(500)
-      .json({ message: "AI generation failed, please try again." });
-  }
-});
-//8...hackathon finder
-app.get("/api/live-hackathons", async (req, res) => {
-  try {
-    console.log("🤖 AI is searching for live hackathons...");
-    const hackathons = await findHackathons(); // This must match the imported name
-    res.json(hackathons);
-  } catch (error) {
-    console.error("AI Route Error:", error.message);
-    res.status(500).json({ message: "Failed to fetch AI hackathons" });
-  }
-});
 
 // 7. GET MY MATCHES
 app.get("/api/matches", verifyToken, async (req, res) => {
@@ -416,64 +388,509 @@ app.get("/api/messages/:partnerId", verifyToken, async (req, res) => {
   }
 });
 
-// 9. GET MY PROFILE (For Settings Page)
-app.get("/api/user/me", verifyToken, async (req, res) => {
+// 6. IDEA SPARK (AI) - Now connects directly to Gemini
+// 6. IDEA SPARK (AI) - Now uses aiService.js
+app.post("/api/idea-spark", async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: "User not found" });
-    res.json(user);
+    const { mySkills, partnerSkills } = req.body;
+
+    // Call the dedicated service function
+    console.log(`🤖 Generating ideas for: ${mySkills} + ${partnerSkills}`);
+    const ideas = await generateHackathonIdeas(mySkills, partnerSkills);
+
+    res.status(200).json({ ideas });
   } catch (error) {
-    res.status(500).json({ message: "Fetch failed" });
+    console.error("Controller Error:", error.message);
+    res
+      .status(500)
+      .json({ message: "AI generation failed, please try again." });
   }
 });
 
-// 10. UPDATE PROFILE
-app.put("/api/user/update", verifyToken, async (req, res) => {
+//8...hackathon finder
+app.get("/api/live-hackathons", async (req, res) => {
   try {
-    const updates = req.body;
+    console.log("🤖 AI is searching for live hackathons...");
+    const hackathons = await findHackathons(); // This must match the imported name
+    res.json(hackathons);
+  } catch (error) {
+    console.error("AI Route Error:", error.message);
+    res.status(500).json({ message: "Failed to fetch AI hackathons" });
+  }
+});
 
-    // Prevent updating sensitive fields like password or email directly here
-    delete updates.password;
-    delete updates.email;
-    delete updates._id;
+// -------------------- MY CALENDAR ROUTES --------------------
 
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      { $set: updates },
-      { new: true } // Return the updated document
+// GET CALENDAR EVENTS
+app.get("/api/calendar", verifyToken, async (req, res) => {
+  try {
+    const events = await Calendar.find({ userId: req.user.id }).sort({
+      date: 1,
+    });
+    res.json(events);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch calendar events" });
+  }
+});
+
+// ADD NOTE / EVENT
+// server/index.js
+// ADD TO CALENDAR
+app.post("/api/calendar", verifyToken, async (req, res) => {
+  try {
+    const { title, date, note, host, location, prize, description, link } =
+      req.body;
+
+    const event = new Calendar({
+      userId: req.user.id,
+      title,
+      date,
+      note,
+      host,
+      location,
+      prize,
+      description,
+      link,
+    });
+
+    await event.save();
+    res.json({ message: "Successfully added to calendar" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to save event" });
+  }
+});
+
+// DELETE FROM CALENDAR
+app.delete("/api/calendar/:id", verifyToken, async (req, res) => {
+  try {
+    await Calendar.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user.id,
+    });
+    res.json({ message: "Event deleted" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete event" });
+  }
+});
+
+// -------------------- EVENT ROUTES --------------------
+
+// 12. GET MY EVENTS
+app.get("/api/events", verifyToken, async (req, res) => {
+  try {
+    const events = await Event.find({ userId: req.user.id }).sort({ date: 1 });
+    res.json(events);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch events" });
+  }
+});
+
+// 13. ADD NEW EVENT
+app.post("/api/events", verifyToken, async (req, res) => {
+  try {
+    const { title, date, type, description } = req.body;
+    const newEvent = new Event({
+      userId: req.user.id,
+      title,
+      date,
+      type,
+      description,
+    });
+    await newEvent.save();
+    res.status(201).json(newEvent);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to add event" });
+  }
+});
+
+// 14. DELETE EVENT
+app.delete("/api/events/:id", verifyToken, async (req, res) => {
+  try {
+    await Event.findOneAndDelete({ _id: req.params.id, userId: req.user.id });
+    res.json({ message: "Event deleted" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete event" });
+  }
+});
+
+// ==================== ROUTE ORGANIZATION ====================
+// 1. TEAM ROUTES
+// 2. AGREEMENT ROUTES
+// 3. USER ROUTES
+// ============================================================
+// ==================== 1. TEAM ROUTES ====================
+
+// GET MY TEAM & AGREEMENT - Auto-populate memberDetails
+app.get("/api/team", verifyToken, async (req, res) => {
+  try {
+    const team = await Team.findOne({ members: req.user.id })
+      .populate("members", "name email role")
+      .populate("agreement.memberDetails.userId", "name");
+
+    if (!team) return res.json({ found: false });
+
+    // ✅ CRITICAL: Auto-populate memberDetails if empty
+    if (
+      !team.agreement.memberDetails ||
+      team.agreement.memberDetails.length === 0
+    ) {
+      team.agreement.memberDetails = team.members.map((member) => ({
+        userId: member._id,
+        name: member.name,
+        role: "",
+        hours: "",
+        responsibility: "",
+      }));
+    }
+
+    console.log("📦 Team sent with populated details:", {
+      teamName: team.teamName,
+      memberCount: team.members.length,
+      detailsCount: team.agreement.memberDetails.length,
+    });
+
+    res.json({ found: true, team });
+  } catch (error) {
+    console.error("Team fetch error:", error);
+    res.status(500).json({ message: "Error fetching team" });
+  }
+});
+
+// CREATE TEAM - Initialize memberDetails after population
+app.post("/api/team/create", verifyToken, async (req, res) => {
+  try {
+    const { teamName, hackathonName, memberIds } = req.body;
+
+    // Validation
+    if (
+      !teamName?.trim() ||
+      !hackathonName?.trim() ||
+      !Array.isArray(memberIds)
+    ) {
+      return res.status(400).json({ message: "Missing required team data" });
+    }
+
+    // Check for existing team
+    const existingTeam = await Team.findOne({
+      teamName: teamName.trim(),
+      creator: req.user.id,
+    });
+    if (existingTeam) {
+      return res
+        .status(400)
+        .json({ message: "Team with this name already exists" });
+    }
+
+    // Deduplicate members
+    const allMembers = Array.from(
+      new Set([req.user.id, ...memberIds.map((id) => id.toString())])
+    );
+    const finalMembers = allMembers.filter((id) => id !== req.user.id);
+
+    const newTeam = new Team({
+      teamName: teamName.trim(),
+      hackathonName: hackathonName.trim(),
+      creator: req.user.id,
+      members: allMembers,
+      agreement: {
+        memberDetails: [], // Will be populated after save
+        signedMembers: [],
+        ipRule: "joint",
+        decisionRule: "majority",
+        commitmentRule: "",
+        status: "Draft",
+      },
+    });
+
+    await newTeam.save();
+
+    // ✅ CRITICAL: Populate AND initialize memberDetails
+    const populatedTeam = await Team.findById(newTeam._id)
+      .populate("members", "name email role")
+      .lean();
+
+    // Add memberDetails from populated members
+    populatedTeam.agreement.memberDetails = populatedTeam.members.map(
+      (member) => ({
+        userId: member._id,
+        name: member.name,
+        role: "",
+        hours: "",
+        responsibility: "",
+      })
     );
 
-    res.json({ message: "Profile updated successfully", user });
+    console.log("✅ Team created:", {
+      teamName: populatedTeam.teamName,
+      members: populatedTeam.members.length,
+    });
+
+    res.status(201).json({
+      message: "Team created successfully",
+      team: populatedTeam,
+    });
   } catch (error) {
-    console.error("Update Error:", error);
+    console.error("Team creation error:", error);
+    res.status(500).json({ message: "Failed to create team" });
+  }
+});
+
+// UPDATE CONTRACT - Fixed with proper population
+app.put("/api/team/:teamId/contract", verifyToken, async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    const { ipRule, decisionRule, commitmentRule, memberDetails } = req.body;
+
+    const team = await Team.findOneAndUpdate(
+      { _id: teamId, members: req.user.id }, // Security: must be member
+      {
+        $set: {
+          "agreement.ipRule": ipRule || "joint",
+          "agreement.decisionRule": decisionRule || "majority",
+          "agreement.commitmentRule": commitmentRule || "",
+          "agreement.memberDetails": memberDetails || [],
+          "agreement.status": "Draft", // Reset if editing
+        },
+      },
+      { new: true }
+    )
+      .populate("members", "name email role")
+      .populate("agreement.memberDetails.userId", "name");
+
+    if (!team) {
+      return res
+        .status(404)
+        .json({ message: "Team not found or access denied" });
+    }
+
+    // Ensure memberDetails is populated even after update
+    if (
+      !team.agreement.memberDetails ||
+      team.agreement.memberDetails.length === 0
+    ) {
+      team.agreement.memberDetails = team.members.map((member) => ({
+        userId: member._id,
+        name: member.name,
+        role: "",
+        hours: "",
+        responsibility: "",
+      }));
+    }
+
+    res.json(team);
+  } catch (error) {
+    console.error("Contract update error:", error);
     res.status(500).json({ message: "Update failed" });
   }
 });
 
-// 11. UNMATCH USER (REMOVE TEAMMATE)
-app.delete("/api/matches/:id", verifyToken, async (req, res) => {
+// SIGN CONTRACT - Fixed ID handling + full repopulation
+app.post("/api/team/:teamId/sign", verifyToken, async (req, res) => {
   try {
-    const partnerId = req.params.id;
+    const { teamId } = req.params;
+    const userId = req.user.id;
+
+    let team = await Team.findOne({ _id: teamId, members: userId });
+    if (!team) {
+      return res
+        .status(404)
+        .json({ message: "Team not found or not a member" });
+    }
+
+    // Add user to signedMembers (with deduplication)
+    const userIdStr = userId.toString();
+    if (
+      !team.agreement.signedMembers.some((id) => id.toString() === userIdStr)
+    ) {
+      team.agreement.signedMembers.push(userId);
+
+      // Check if all signed
+      if (team.agreement.signedMembers.length === team.members.length) {
+        team.agreement.status = "Signed";
+      }
+
+      await team.save();
+    }
+
+    // Return fully populated team
+    const updatedTeam = await Team.findById(teamId)
+      .populate("members", "name email role")
+      .populate("agreement.memberDetails.userId", "name")
+      .lean();
+
+    // Ensure memberDetails exists
+    if (
+      !updatedTeam.agreement.memberDetails ||
+      updatedTeam.agreement.memberDetails.length === 0
+    ) {
+      updatedTeam.agreement.memberDetails = updatedTeam.members.map(
+        (member) => ({
+          userId: member._id,
+          name: member.name,
+          role: "",
+          hours: "",
+          responsibility: "",
+        })
+      );
+    }
+
+    res.json({ message: "Signed successfully", team: updatedTeam });
+  } catch (error) {
+    console.error("Contract signing error:", error);
+    res.status(500).json({ message: "Signing failed" });
+  }
+});
+
+// LEAVE/DELETE TEAM - Enhanced cleanup
+app.delete("/api/team/leave", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id.toString();
+    const team = await Team.findOne({ members: userId });
+
+    if (!team) {
+      return res.status(404).json({ message: "No team found" });
+    }
+
+    // Remove from all arrays using consistent string comparison
+    team.members = team.members.filter((id) => id.toString() !== userId);
+
+    team.agreement.memberDetails = team.agreement.memberDetails.filter(
+      (detail) => detail.userId?.toString() !== userId
+    );
+
+    team.agreement.signedMembers = team.agreement.signedMembers.filter(
+      (id) => id.toString() !== userId
+    );
+
+    // Delete if empty or creator leaving
+    if (team.members.length === 0 || team.creator.toString() === userId) {
+      await Team.findByIdAndDelete(team._id);
+      return res.json({ message: "Team deleted successfully" });
+    }
+
+    await team.save();
+    res.json({ message: "You left the team successfully" });
+  } catch (error) {
+    console.error("Leave team error:", error);
+    res.status(500).json({ message: "Failed to leave team" });
+  }
+});
+
+// ==================== 2. AGREEMENT ROUTES ====================
+
+// GET MY AGREEMENT (Legacy - consider deprecation)
+app.get("/api/agreement", verifyToken, async (req, res) => {
+  try {
+    const agreement = await Agreement.findOne({ creatorId: req.user.id });
+    res.json(agreement || null);
+  } catch (error) {
+    console.error("Agreement fetch error:", error);
+    res.status(500).json({ message: "Failed to fetch agreement" });
+  }
+});
+
+// SAVE/UPDATE AGREEMENT (Legacy - consider deprecation)
+app.post("/api/agreement", verifyToken, async (req, res) => {
+  try {
+    const { teamName, hackathonName, members, ipRule, decisionRule, signed } =
+      req.body;
+
+    const agreement = await Agreement.findOneAndUpdate(
+      { creatorId: req.user.id },
+      {
+        creatorId: req.user.id,
+        teamName,
+        hackathonName,
+        members,
+        ipRule,
+        decisionRule,
+        status: signed ? "Signed" : "Draft",
+        signedAt: signed ? new Date() : null,
+      },
+      { new: true, upsert: true }
+    );
+
+    res.json({ message: "Agreement saved", agreement });
+  } catch (error) {
+    console.error("Agreement save error:", error);
+    res.status(500).json({ message: "Failed to save agreement" });
+  }
+});
+
+// ==================== 3. USER ROUTES ====================
+
+// GET MY PROFILE
+app.get("/api/user/me", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password"); // Exclude password
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (error) {
+    console.error("Profile fetch error:", error);
+    res.status(500).json({ message: "Fetch failed" });
+  }
+});
+
+// UPDATE PROFILE
+app.put("/api/user/update", verifyToken, async (req, res) => {
+  try {
+    const updates = { ...req.body };
+
+    // Security: Prevent sensitive field updates
+    const allowedUpdates = {
+      ...updates,
+    };
+    delete allowedUpdates.password;
+    delete allowedUpdates.email;
+    delete allowedUpdates._id;
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: allowedUpdates },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    res.json({ message: "Profile updated successfully", user });
+  } catch (error) {
+    console.error("Profile update error:", error);
+    res.status(500).json({ message: "Update failed" });
+  }
+});
+
+// UNMATCH USER
+app.delete("/api/matches/:partnerId", verifyToken, async (req, res) => {
+  try {
+    const { partnerId } = req.params;
     const myId = req.user.id;
 
-    // 1. Remove partner from MY lists
-    await User.findByIdAndUpdate(myId, {
-      $pull: { matches: partnerId, swipedRight: partnerId },
-    });
+    // Mutual unmatch - atomic operation
+    const [myUpdate, partnerUpdate] = await Promise.all([
+      User.findByIdAndUpdate(
+        myId,
+        {
+          $pull: { matches: partnerId, swipedRight: partnerId },
+        },
+        { new: true }
+      ),
 
-    // 2. Remove ME from PARTNER'S lists (Mutual unmatch)
-    await User.findByIdAndUpdate(partnerId, {
-      $pull: { matches: myId, swipedRight: myId },
-    });
+      User.findByIdAndUpdate(
+        partnerId,
+        {
+          $pull: { matches: myId, swipedRight: myId },
+        },
+        { new: true }
+      ),
+    ]);
 
     res.json({ message: "Unmatched successfully" });
   } catch (error) {
-    console.error("Unmatch Error:", error);
+    console.error("Unmatch error:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
 
+// ==================== SERVER START ====================
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () =>
-  console.log(`🚀 Server running on port ${PORT} with Socket.io`)
-);
+server.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT} with Socket.io`);
+});
