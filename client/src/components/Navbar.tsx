@@ -18,7 +18,11 @@ export const Navbar = ({ showProfile = false }: NavbarProps) => {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 group">
           <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center glow-primary group-hover:scale-110 transition-transform">
-            <Sparkles className="w-5 h-5 text-primary-foreground" />
+            <img
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23222222'/%3E%3Ccircle cx='35' cy='40' r='12' fill='%23FF6B6B'/%3E%3Crect x='28' y='55' width='14' height='28' rx='7' fill='%23FF6B6B'/%3E%3Ccircle cx='65' cy='40' r='12' fill='%2342C2FF'/%3E%3Crect x='58' y='55' width='14' height='28' rx='7' fill='%2342C2FF'/%3E%3Cpath d='M35 65 Q50 50 65 65' stroke='%2300FF88' stroke-width='4' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='50' cy='52' r='3' fill='%2300FF88'/%3E%3C/svg%3E"
+              alt="GitTogether Logo"
+              className="w-8 h-8 rounded-lg hover:scale-110 transition-transform duration-300"
+            />
           </div>
           <span className="text-xl font-bold tracking-tight text-foreground">
             GitTogether
