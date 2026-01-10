@@ -17,11 +17,11 @@ import {
   Loader2,
   AlertCircle,
   Lock,
-  // User, // Kept imported but unused as per your commented out code
 } from "lucide-react";
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
+  // 🔥 STRATEGY: Default to Login.
+  const [isLogin, setIsLogin] = useState(true); 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -40,23 +40,19 @@ export default function AuthPage() {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
 
-      console.log("Google User:", user); // Debugging
+      console.log("Google User:", user); 
 
-      // Ensure URL is clean
       const cleanBaseUrl = API_BASE_URL.replace(/\/+$/, "");
       
-      // Send to Backend
       const res = await axios.post(`${cleanBaseUrl}/api/google-login`, {
         email: user.email,
         name: user.displayName,
         avatar: user.photoURL
       });
 
-      // Log in to your app
       login(res.data.token, res.data.user);
-      toast.success("Welcome via Google!");
+      toast.success("System Access Granted. Welcome! 🚀");
       
-      // Navigate based on onboarding status
       if (res.data.user.isOnboarded) {
         navigate("/dashboard");
       } else {
@@ -65,17 +61,16 @@ export default function AuthPage() {
 
     } catch (error) {
       console.error("Google Login Error:", error);
-      toast.error("Google Login Failed");
+      toast.error("Auth Protocol Cancelled.");
     }
   };
 
   // --- EMAIL/PASSWORD HANDLER ---
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
-    // 🔥 URL CLEANUP: Prevents double slashes
     const cleanBaseUrl = API_BASE_URL.replace(/\/+$/, "");
     const API_URL = `${cleanBaseUrl}/api`;
 
@@ -97,15 +92,15 @@ export default function AuthPage() {
 
         login(data.token, data.user.email, data.user.isOnboarded);
 
+        // Save basics to local storage
         localStorage.setItem("userName", data.user.name || "");
         localStorage.setItem("userCollege", data.user.college || "");
         localStorage.setItem("userRole", data.user.role || "");
-
         if (data.user.avatarGradient) {
           localStorage.setItem("userAvatar", data.user.avatarGradient);
         }
 
-        toast.success("Welcome back! 🚀");
+        toast.success("Identity Verified. Welcome back! 👋");
 
         if (data.user.isOnboarded) {
           navigate("/dashboard");
@@ -113,23 +108,30 @@ export default function AuthPage() {
           navigate("/onboarding");
         }
       } else {
-        // --- SIGNUP LOGIC ---
-        await axios.post(`${API_URL}/signup`, {
-          name: formData.name,
-          email: formData.identifier,
-          password: formData.password,
-        });
-
-        toast.success("Account created successfully! Please login.");
-        setIsLogin(true);
+        // --- MANUAL SIGNUP BLOCKED ---
+        toast.info("Manual signup is paused. 🛑 Please use Google Login!");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Auth Error:", err);
-      const errorMessage =
-        err.response?.data?.message || err.message || "Connection failed.";
+      
+      // 🔥 GENUINE COOL ERROR HANDLING 🔥
+      let displayMessage = "Connection interrupted. Retry handshake.";
+      
+      // 1. Check for 404 (User Not Found)
+      if (err.response?.status === 404) {
+        displayMessage = "User object not found! 🌟 Use Google to initialize.";
+      } 
+      // 2. Check for 400 (Invalid Credentials)
+      else if (err.response?.status === 400) {
+        displayMessage = "Access Denied: Invalid key/password. 🔑";
+      }
+      // 3. Fallback to server message if available
+      else if (err.response?.data?.message) {
+        displayMessage = err.response.data.message;
+      }
 
-      setError(errorMessage);
-      toast.error(errorMessage);
+      setError(displayMessage);
+      toast.error(displayMessage);
     } finally {
       setIsLoading(false);
     }
@@ -181,7 +183,7 @@ export default function AuthPage() {
         className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-500/20 rounded-full blur-[120px] pointer-events-none mix-blend-screen"
       />
 
-      {/* 3. Floating Particles / Stars */}
+      {/* 3. Floating Particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {[...Array(30)].map((_, i) => (
           <motion.div
@@ -241,14 +243,14 @@ export default function AuthPage() {
           <div className="relative h-9 overflow-hidden mb-2">
             <AnimatePresence mode="wait">
               <motion.h1
-                key={isLogin ? "login" : "signup"}
+                key="login"
                 initial={{ y: 20, opacity: 0, filter: "blur(4px)" }}
                 animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
                 exit={{ y: -20, opacity: 0, filter: "blur(4px)" }}
                 transition={{ duration: 0.3 }}
                 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-white/50 absolute w-full tracking-tight"
               >
-                {isLogin ? "Welcome Back" : "Create Account"}
+                Ready to Commit?
               </motion.h1>
             </AnimatePresence>
           </div>
@@ -257,13 +259,11 @@ export default function AuthPage() {
             layout
             className="text-muted-foreground text-xs max-w-[90%] mx-auto"
           >
-            {isLogin
-              ? "Login to find your perfect team."
-              : "Join the community today."}
+            Initialize session to merge with the best teams.
           </motion.p>
         </div>
 
-        {/* 🔥 NEW GOOGLE BUTTON ADDED HERE */}
+        {/* --- GOOGLE BUTTON --- */}
         <div className="mb-4">
           <Button
             type="button"
@@ -271,7 +271,6 @@ export default function AuthPage() {
             className="w-full h-10 border-white/10 bg-white/5 hover:bg-white/10 text-white font-medium rounded-xl flex items-center justify-center gap-2 transition-all"
             onClick={handleGoogleLogin}
           >
-            {/* Simple SVG Google Logo */}
             <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -286,44 +285,26 @@ export default function AuthPage() {
               <span className="w-full border-t border-white/10" />
             </div>
             <div className="relative flex justify-center text-[10px] uppercase">
-              <span className="bg-[#0c0c0c] px-2 text-muted-foreground">Or continue with email</span>
+              <span className="bg-[#0c0c0c] px-2 text-muted-foreground">Or access via terminal</span>
             </div>
           </div>
         </div>
 
+        {/* --- MANUAL LOGIN FORM --- */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* {!isLogin && (
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="name"
-                  placeholder="John Doe"
-                  className="bg-background/50 pl-10"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  required
-                />
-              </div>
-            </div>
-          )} */}
-
           <div className="space-y-1.5">
             <Label
               htmlFor="identifier"
               className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 ml-1"
             >
-              Email Address
+              Dev ID / Email
             </Label>
             <div className="relative group">
               <Mail className="w-4 h-4 absolute left-3 top-3 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
               <Input
                 id="identifier"
                 type="email"
-                placeholder="name@example.com"
+                placeholder="dev@git-together.com"
                 className="bg-white/5 border-white/10 pl-9 h-10 focus:bg-white/10 focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all duration-300 rounded-xl placeholder:text-muted-foreground/40 text-sm"
                 value={formData.identifier}
                 onChange={(e) =>
@@ -339,7 +320,7 @@ export default function AuthPage() {
               htmlFor="password"
               className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 ml-1"
             >
-              Password
+              Access Key
             </Label>
             <div className="relative group">
               <Lock className="w-4 h-4 absolute left-3 top-3 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
@@ -383,30 +364,24 @@ export default function AuthPage() {
               ) : (
                 <ArrowRight className="w-4 h-4 mr-2 group-hover/btn:translate-x-0.5 transition-transform" />
               )}
-              <span key={isLogin ? "login-btn" : "signup-btn"}>
-                {isLoading
-                  ? "Connecting..."
-                  : isLogin
-                  ? "Sign In"
-                  : "Create Account"}
+              <span>
+                {isLoading ? "Connecting..." : ">> Authenticate"}
               </span>
             </div>
           </Button>
         </form>
 
         <div className="mt-6 pt-4 border-t border-white/10 text-center text-xs">
-          <span className="text-muted-foreground">
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
-          </span>
-          <button
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setError("");
-            }}
-            className="text-white font-semibold hover:text-primary transition-colors ml-1 hover:underline underline-offset-4"
-          >
-            {isLogin ? "Sign up" : "Login"}
-          </button>
+          <p className="text-muted-foreground/60 italic">
+            Uninitialized? Execute{" "}
+            <span 
+              onClick={handleGoogleLogin} 
+              className="font-bold text-primary hover:text-primary/80 hover:underline cursor-pointer transition-colors"
+            >
+              Google Auth
+            </span>{" "}
+            for verified instance.
+          </p>
         </div>
       </motion.div>
     </div>
