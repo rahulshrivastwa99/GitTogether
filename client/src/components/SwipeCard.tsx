@@ -278,9 +278,7 @@ export const SwipeCard = forwardRef<HTMLDivElement, SwipeCardProps>(({ user, onS
               {user.resume && (
                 <button
                   type="button"
-                  onClick={(e) =>
-                    openLink(e, `${API_BASE_URL}/${user.resume}`)
-                  }
+                  onClick={(e) => openLink(e, user.resume)}
                   className="hover:scale-110 transition-transform cursor-pointer outline-none"
                 >
                   <Code2 className="w-5 h-5 text-zinc-500 hover:text-orange-400" />

@@ -70,7 +70,10 @@ const userSchema = new mongoose.Schema({
   role: { type: String },
   skills: [String],
   bio: { type: String },
-  github: { type: String },
+  linkedin: { type: String, default: "" },
+  github: { type: String, default: "" }, 
+  portfolio: { type: String, default: "" },
+   resume: { type: String, default: "" },
   mode: { type: String, default: "Chill" },
   isOnboarded: { type: Boolean, default: false },
   avatarGradient: { type: String },
@@ -319,83 +322,69 @@ app.post("/api/google-login", async (req, res) => {
 });
 
 // 1. Configure how files are stored
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/"); // Make sure this folder exists!
-  },
-  filename: (req, file, cb) => {
-    // This gives the file a unique name while keeping the extension (.pdf)
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(
-      null,
-      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
-    );
-  },
+// ADD THIS
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit to keep your DB healthy
 });
-
-const upload = multer({ storage: storage });
 
 
 app.use("/uploads", express.static("uploads"));
 // 3. ONBOARDING
 // 2. Update the Onboarding Route
+
+
 // Add 'upload.single("resume")' as middleware to this specific route
-app.post(
-  "/api/onboarding",
-  verifyToken,
-  upload.single("resume"),
-  async (req, res) => {
-    try {
-      // With multer, text fields are in req.body, and the file is in req.file
-      const {
-        name,
-        college,
-        role,
-        skills,
-        bio,
-        github,
-        linkdein,
-        portfolio,
-        resume,
-        mode,
-      } = req.body;
+app.post("/api/onboarding", verifyToken, upload.single("resume"), async (req, res) => {
+  try {
+    // 1. Extract all fields from req.body (Matches your Onboarding.tsx fields)
+    const { name, college, role, skills, bio, github, linkedin, portfolio, mode } = req.body;
+    
+    let resumeData = "";
 
-      // skills is sent as a JSON string from frontend, need to parse it back to an array
-      const parsedSkills =
-        typeof skills === "string" ? JSON.parse(skills) : skills;
-
-      const updateData = {
-        name,
-        college,
-        role,
-        skills: parsedSkills,
-        bio,
-        github,
-        linkdein,
-        portfolio,
-        resume,
-        mode,
-        isOnboarded: true,
-      };
-
-      // If a file was uploaded, you can save its path to the user profile
-      if (req.file) {
-        // Use forward slashes for the database to keep it URL-friendly
-        updateData.resume = req.file.path.replace(/\\/g, "/");
-        console.log("File saved at:", req.file.path);
-      }
-
-      const user = await User.findByIdAndUpdate(req.user.id, updateData, {
-        new: true,
-      });
-
-      res.status(200).json({ message: "Profile updated", user });
-    } catch (error) {
-      console.error("Onboarding Error:", error);
-      res.status(500).json({ message: "Update failed", error: error.message });
+    // 2. Convert PDF buffer to Base64 String if file exists
+    if (req.file) {
+      // Create a "Data URL" (e.g., data:application/pdf;base64,JVBERi...)
+      const b64 = Buffer.from(req.file.buffer).toString("base64");
+      resumeData = `data:${req.file.mimetype};base64,${b64}`;
     }
+
+    // 3. Parse skills back into an array
+    const parsedSkills = typeof skills === "string" ? JSON.parse(skills) : skills;
+
+    // 4. Prepare the update object
+    const updateData = {
+      name,
+      college,
+      role,
+      bio,
+      github,
+      linkedin,
+      portfolio,
+      mode,
+      skills: parsedSkills,
+      isOnboarded: true
+    };
+
+    // 5. Add resume data only if a file was actually uploaded
+    if (resumeData) {
+      updateData.resume = resumeData;
+    }
+    
+    // 6. Save to MongoDB
+    const user = await User.findByIdAndUpdate(req.user.id, updateData, { new: true });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ message: "Profile updated successfully 🚀", user });
+
+  } catch (error) {
+    console.error("Onboarding Update Error:", error);
+    res.status(500).json({ message: "Update failed", error: error.message });
   }
-);
+});
 
 // 4. GET USERS FEED
 app.get("/api/users", verifyToken, async (req, res) => {
