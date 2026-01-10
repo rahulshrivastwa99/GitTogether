@@ -12,6 +12,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 // import {Sparkles} from "lucide-react";
+import API_BASE_URL from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { io, Socket } from "socket.io-client";
@@ -62,7 +63,7 @@ export function ChatInterface({ partner, isOpen, onClose }: ChatProps) {
     if (!token || !myId) return;
 
     if (!socketRef.current) {
-      socketRef.current = io("http://localhost:5000", {
+      socketRef.current = io(`${API_BASE_URL}`, {
         transports: ["websocket"],
         reconnection: true,
       });
@@ -102,7 +103,7 @@ export function ChatInterface({ partner, isOpen, onClose }: ChatProps) {
       setError(null);
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/messages/${partnerId}`,
+          `${API_BASE_URL}/api/messages/${partnerId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setMessages(res.data);

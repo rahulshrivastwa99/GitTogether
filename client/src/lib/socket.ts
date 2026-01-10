@@ -1,6 +1,6 @@
 // src/lib/socket.ts
 import { io } from "socket.io-client";
-import API_BASE_URL from "./api"; // Ensure this points to your backend (e.g., http://localhost:5000)
+import API_BASE_URL from "./api"; // Ensure this points to your backend (e.g., ${API_BASE_URL})
 
 // Connect to the backend URL
 export const socket = io(API_BASE_URL, {

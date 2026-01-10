@@ -37,7 +37,7 @@ export default function AuthPage() {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-
+    console.log("🚀 Attempting to connect to:", API_BASE_URL);
     try {
       const API_URL = `${API_BASE_URL}/api`;
 

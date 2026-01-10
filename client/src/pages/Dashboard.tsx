@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import axios from "axios";
+import API_BASE_URL from "@/lib/api";
 import { io, Socket } from "socket.io-client";
 import {
   MessageCircle,
@@ -135,7 +136,7 @@ const Dashboard = () => {
     const myId = JSON.parse(window.atob(base64)).id;
 
     if (!socketRef.current) {
-      socketRef.current = io("http://localhost:5000");
+      socketRef.current = io(`${API_BASE_URL}`);
     }
     const socket = socketRef.current;
 
@@ -235,7 +236,7 @@ const Dashboard = () => {
     }
     try {
       setLoading(true);
-      const response = await axios.get("http://localhost:5000/api/users", {
+      const response = await axios.get(`${API_BASE_URL}/api/users`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const mappedUsers = response.data.map((u: any) => ({
@@ -268,7 +269,7 @@ const Dashboard = () => {
   const fetchMatches = useCallback(async () => {
     if (!token) return;
     try {
-      const response = await axios.get("http://localhost:5000/api/matches", {
+      const response = await axios.get(`${API_BASE_URL}/api/matches`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const mappedMatches = response.data.map((u: any) => ({
@@ -333,7 +334,7 @@ const Dashboard = () => {
 
     try {
       const res = await axios.post(
-        "http://localhost:5000/api/swipe",
+        `${API_BASE_URL}/api/swipe`,
         {
           targetUserId: currentUser.id || currentUser._id,
           direction,

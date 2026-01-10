@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import API_BASE_URL from "@/lib/api";
 import {
   Search,
   MapPin,
@@ -95,7 +96,7 @@ export default function HackathonPage() {
     setUsingBackup(false);
     try {
       const response = await fetch(
-        "http://localhost:5000/api/live-hackathons",
+        `${API_BASE_URL}/api/live-hackathons`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -124,7 +125,7 @@ export default function HackathonPage() {
   // Inside HackathonPage.tsx
   const addToCalendar = async (hack: Hackathon) => {
     try {
-      const response = await fetch("http://localhost:5000/api/calendar", {
+      const response = await fetch(`${API_BASE_URL}/api/calendar`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -5,6 +5,7 @@ import {
   PanInfo,
   animate,
 } from "framer-motion";
+import React, { forwardRef } from 'react';
 import {
   Github,
   Linkedin,
@@ -22,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import API_BASE_URL from "@/lib/api";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { UserProfile } from "@/pages/Dashboard";
 
@@ -32,7 +34,7 @@ interface SwipeCardProps {
   exitDirection: "left" | "right";
 }
 
-export const SwipeCard = ({ user, onSwipe, isTop }: SwipeCardProps) => {
+export const SwipeCard = forwardRef<HTMLDivElement, SwipeCardProps>(({ user, onSwipe, isTop }, ref) => {
   // Motion Values
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-15, 15]);
@@ -82,6 +84,7 @@ export const SwipeCard = ({ user, onSwipe, isTop }: SwipeCardProps) => {
 
   return (
     <motion.div
+      ref={ref} // <--- FIXED: Attached the forwarded ref here
       style={{
         x,
         rotate: isTop ? rotate : 0,
@@ -276,7 +279,7 @@ export const SwipeCard = ({ user, onSwipe, isTop }: SwipeCardProps) => {
                 <button
                   type="button"
                   onClick={(e) =>
-                    openLink(e, `http://localhost:5000/${user.resume}`)
+                    openLink(e, `${API_BASE_URL}/${user.resume}`)
                   }
                   className="hover:scale-110 transition-transform cursor-pointer outline-none"
                 >
@@ -289,6 +292,7 @@ export const SwipeCard = ({ user, onSwipe, isTop }: SwipeCardProps) => {
       </Card>
     </motion.div>
   );
-};
+});
 
+SwipeCard.displayName = 'SwipeCard';
 export default SwipeCard;
