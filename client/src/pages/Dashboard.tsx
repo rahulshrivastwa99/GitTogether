@@ -1,19 +1,18 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import axios from "axios";
-import { io } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 import {
   MessageCircle,
-  Filter,
   Zap,
-  Calendar,
-  Github,
   Loader2,
-  Check,
   X,
   MapPin,
   PanelRight,
   PanelRightClose,
+  BellRing,
+  Github,
+  Check,
 } from "lucide-react";
 
 // --- COMPONENTS ---
@@ -43,6 +42,11 @@ export interface UserProfile {
   techStack: string[];
   achievements: string[];
   avatarGradient: string;
+  github?: string;
+  linkedin?: string;
+  portfolio?: string;
+  resume?: string;
+  mode?: string;
   college: string;
   stats: {
     completionRate: number;
@@ -56,8 +60,6 @@ export interface HackathonEvent {
   date: string;
   status: string;
 }
-
-const filters = ["All", "Frontend", "Backend", "AI/ML", "Design", "Web3"];
 
 const Dashboard = () => {
   const { userEmail, token } = useAuth();
@@ -80,15 +82,22 @@ const Dashboard = () => {
     null
   );
 
+  // --- NOTIFICATION STATE ---
+  const [notification, setNotification] = useState<{
+    senderId: string;
+    senderName: string;
+    content: string;
+  } | null>(null);
+
   // --- GITHUB STATE ---
   const [showGithubModal, setShowGithubModal] = useState(false);
   const [githubInput, setGithubInput] = useState("");
   const [githubStatus, setGithubStatus] = useState<
     "idle" | "loading" | "connected"
   >("idle");
-  const [userAvatar, setUserAvatar] = useState("");
 
   // --- DATA STATE ---
+  const [userAvatar, setUserAvatar] = useState("");
   const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [matches, setMatches] = useState<UserProfile[]>([]);
@@ -97,17 +106,18 @@ const Dashboard = () => {
   const [upcomingHackathons, setUpcomingHackathons] = useState<
     HackathonEvent[]
   >([]);
+
   const [loading, setLoading] = useState(true);
 
-  // --- 1. LOAD PROFILE ---
+  // --- SOCKET REF ---
+  const socketRef = useRef<Socket | null>(null);
+
   const myProfile = {
     name:
       localStorage.getItem("userName") || userEmail?.split("@")[0] || "User",
     role: localStorage.getItem("userRole") || "Developer",
     college: localStorage.getItem("userCollege") || "Unknown College",
     email: userEmail,
-    bio: "Ready to hack!",
-    techStack: ["React", "JavaScript", "Python"],
     stats: { swipes: 42, matches: matches.length, karma: 950 },
   };
 
@@ -116,20 +126,22 @@ const Dashboard = () => {
     if (savedAvatar) setUserAvatar(savedAvatar);
   }, []);
 
-  // --- 2. SOCKET.IO REAL-TIME MATCH LISTENER ---
+  // --- SOCKET.IO LISTENER ---
   useEffect(() => {
     if (!token) return;
 
-    // Parse user ID from token
     const base64Url = token.split(".")[1];
     const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
     const myId = JSON.parse(window.atob(base64)).id;
 
-    const socket = io("http://localhost:5000");
+    if (!socketRef.current) {
+      socketRef.current = io("http://localhost:5000");
+    }
+    const socket = socketRef.current;
+
     socket.emit("join_room", myId);
 
     socket.on("match_found", (data) => {
-      console.log("🔥 Real-time Match Found:", data);
       const matchedProfile: UserProfile = {
         id: data.id,
         _id: data.id,
@@ -137,8 +149,13 @@ const Dashboard = () => {
         role: data.role || "Developer",
         avatarGradient: data.avatarGradient,
         college: data.college || "Hackathon Partner",
-        bio: "",
-        techStack: [],
+        bio: data.bio || "",
+        techStack: data.skills || [],
+        github: data.github,
+        linkedin: data.linkedin,
+        portfolio: data.portfolio,
+        resume: data.resume,
+        mode: data.mode,
         achievements: [],
         stats: {
           completionRate: 100,
@@ -151,32 +168,76 @@ const Dashboard = () => {
       setMatches((prev) => [matchedProfile, ...prev]);
     });
 
+    socket.on("receive_message", (msg) => {
+      if (msg.sender === myId) return;
+
+      setNotification((prev) => {
+        const sender = allUsers.find(
+          (u) => u.id === msg.sender || u._id === msg.sender
+        );
+        const senderName = sender ? sender.name : "New Message";
+        return {
+          senderId: msg.sender,
+          senderName: senderName,
+          content: msg.content,
+        };
+      });
+    });
+
     return () => {
       socket.off("match_found");
+      socket.off("receive_message");
     };
-  }, [token]);
+  }, [token, allUsers]);
 
-  // 2. Function to trigger the Chat Interface from the Popup
-  const handleStartChatFromMatch = () => {
-    if (lastMatchedUser) {
-      setActiveChatUser(lastMatchedUser); // This opens the ChatInterface.tsx
-      setMatchPopupOpen(false); // Closes the match popup
+  const handleNotificationClick = () => {
+    if (notification) {
+      const user = allUsers.find(
+        (u) => u.id === notification.senderId || u._id === notification.senderId
+      );
+      if (user) setActiveChatUser(user);
+      setNotification(null);
     }
   };
 
-  // --- 3. FETCH USERS ---
+  const handleConfirmGithub = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!githubInput) return;
+    setGithubStatus("loading");
+
+    setTimeout(() => {
+      let url = githubInput;
+      if (!url.startsWith("http")) {
+        url = `https://github.com/${url.replace(
+          /^(https?:\/\/)?(www\.)?github\.com\//,
+          ""
+        )}`;
+      }
+      window.open(url, "_blank");
+      setGithubStatus("connected");
+      setGithubInput("");
+      setShowGithubModal(false);
+    }, 1500);
+  };
+
+  const handleStartChatFromMatch = () => {
+    if (lastMatchedUser) {
+      setActiveChatUser(lastMatchedUser);
+      setMatchPopupOpen(false);
+    }
+  };
+
+  // --- FETCH DATA ---
   const fetchUsers = useCallback(async () => {
     if (!token) {
       setLoading(false);
       return;
     }
-
     try {
       setLoading(true);
       const response = await axios.get("http://localhost:5000/api/users", {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       const mappedUsers = response.data.map((u: any) => ({
         id: u._id,
         name: u.name || "Anonymous Hacker",
@@ -184,13 +245,17 @@ const Dashboard = () => {
         college: u.college || "Unknown College",
         bio: u.bio || "Ready to code.",
         techStack: u.skills || [],
+        github: u.github, // Mapped from backend
+        linkedin: u.linkedin,
+        portfolio: u.portfolio,
+        resume: u.resume,
+        mode: u.mode,
         achievements: [],
         avatarGradient:
           u.avatarGradient ||
           "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
         stats: { completionRate: 80, activityLevel: "High", availability: 20 },
       }));
-
       setAllUsers(mappedUsers);
       setUsers(mappedUsers);
     } catch (error) {
@@ -200,14 +265,12 @@ const Dashboard = () => {
     }
   }, [token]);
 
-  // --- 4. FETCH MATCHES ---
   const fetchMatches = useCallback(async () => {
     if (!token) return;
     try {
       const response = await axios.get("http://localhost:5000/api/matches", {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       const mappedMatches = response.data.map((u: any) => ({
         id: u._id,
         name: u.name,
@@ -215,14 +278,18 @@ const Dashboard = () => {
         college: u.college,
         bio: u.bio,
         techStack: u.skills || [],
+        github: u.github,
+        linkedin: u.linkedin,
+        portfolio: u.portfolio,
+        resume: u.resume,
+        mode: u.mode,
         avatarGradient:
           u.avatarGradient ||
           "linear-gradient(135deg, #FF6B6B 0%, #556270 100%)",
       }));
-
       setMatches(mappedMatches);
     } catch (error) {
-      console.log("Matches fetch skipped or failed");
+      console.log("Matches fetch failed");
     }
   }, [token]);
 
@@ -231,7 +298,7 @@ const Dashboard = () => {
     fetchMatches();
   }, [fetchUsers, fetchMatches]);
 
-  // --- 5. FILTER LOGIC ---
+  // --- FILTER & SWIPE LOGIC ---
   useEffect(() => {
     let filtered = allUsers;
     if (activeFilter !== "All") {
@@ -253,14 +320,11 @@ const Dashboard = () => {
     setUsers(filtered);
   }, [activeFilter, isCampusFilterActive, allUsers, myProfile.college]);
 
-  // --- 6. SWIPE HANDLER ---
   const handleSwipe = async (direction: "left" | "right") => {
     setExitDirection(direction);
     const currentUser = users[0];
-
     if (!currentUser) return;
 
-    // Optimistic UI Update
     setTimeout(() => {
       setUsers((prev) => prev.slice(1));
     }, 200);
@@ -308,33 +372,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleConfirmGithub = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!githubInput) return;
-    setGithubStatus("loading");
-    setTimeout(() => {
-      let url = githubInput;
-      if (!url.startsWith("http")) {
-        url = `https://github.com/${url.replace(
-          /^(https?:\/\/)?(www\.)?github\.com\//,
-          ""
-        )}`;
-      }
-      window.open(url, "_blank");
-      setGithubStatus("connected");
-      setGithubInput("");
-      setShowGithubModal(false);
-    }, 1500);
-  };
-
-  // Handler for MatchDialog "Send Message" button
-  const handleStartChatFromPopup = () => {
-    if (lastMatchedUser) {
-      setActiveChatUser(lastMatchedUser);
-      setMatchPopupOpen(false);
-    }
-  };
-
   // --- RIGHT SIDEBAR CONTENT ---
   const SidebarContent = () => (
     <Card className="p-4 border-border/50 bg-card/50 mb-6">
@@ -359,6 +396,16 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full mb-4 text-xs gap-2"
+        onClick={() => setShowGithubModal(true)}
+      >
+        <Github className="w-3 h-3" />
+        {githubStatus === "connected" ? "GitHub Connected" : "Connect GitHub"}
+      </Button>
 
       <div className="mb-4">
         <h3 className="font-bold text-xs text-muted-foreground uppercase tracking-wider mb-2">
@@ -396,29 +443,6 @@ const Dashboard = () => {
           )}
         </div>
       </div>
-
-      <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-border/50">
-        <div className="p-2 bg-muted/50 rounded-lg">
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-            Karma
-          </div>
-          <div className="font-bold text-sm">{myProfile.stats.karma}</div>
-        </div>
-        <div className="p-2 bg-muted/50 rounded-lg">
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-            Swipes
-          </div>
-          <div className="font-bold text-sm">{myProfile.stats.swipes}</div>
-        </div>
-        <div className="p-2 bg-muted/50 rounded-lg">
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
-            Requests
-          </div>
-          <div className="font-bold text-sm">
-            {sentRequests.length + receivedRequests.length}
-          </div>
-        </div>
-      </div>
     </Card>
   );
 
@@ -441,28 +465,13 @@ const Dashboard = () => {
               Swipe right to connect.
             </p>
           </div>
-
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsCampusFilterActive(!isCampusFilterActive)}
-              className={
-                isCampusFilterActive
-                  ? "bg-purple-500/20 text-purple-300 border-purple-500/50"
-                  : ""
-              }
-            >
-              <MapPin className="w-4 h-4 mr-2" />
-              {isCampusFilterActive ? "My Campus" : "All Locations"}
-            </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setMatchesSidebarOpen(true)}
             >
-              <MessageCircle className="w-4 h-4 mr-2" />
-              Requests
+              <MessageCircle className="w-4 h-4 mr-2" /> Requests
             </Button>
             <Button
               variant="outline"
@@ -478,29 +487,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="px-6 pb-2 overflow-x-auto flex gap-2 scrollbar-hide">
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-full border-dashed"
-          >
-            <Filter className="w-3 h-3 mr-2" /> Filters
-          </Button>
-          {filters.map((f) => (
-            <button
-              key={f}
-              onClick={() => setActiveFilter(f)}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
-                activeFilter === f
-                  ? "bg-foreground text-background"
-                  : "bg-muted/50 text-muted-foreground"
-              }`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-
         <div className="flex-1 flex flex-col items-center justify-center relative p-4 min-h-0">
           <UserSearch
             open={searchOpen}
@@ -511,7 +497,6 @@ const Dashboard = () => {
           {loading ? (
             <div className="flex flex-col items-center justify-center z-20">
               <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-              <p className="text-muted-foreground">Finding teammates...</p>
             </div>
           ) : users.length > 0 ? (
             <div className="flex flex-col items-center w-full max-w-[340px] h-full z-20">
@@ -594,7 +579,7 @@ const Dashboard = () => {
         isOpen={matchPopupOpen}
         onClose={() => setMatchPopupOpen(false)}
         matchedUser={lastMatchedUser}
-        onStartChat={handleStartChatFromMatch} // 🔥 PASS THE NEW PROP HERE
+        onStartChat={handleStartChatFromMatch}
         currentUserImage={
           userAvatar ||
           `https://api.dicebear.com/7.x/initials/svg?seed=${myProfile.name}`
@@ -612,6 +597,105 @@ const Dashboard = () => {
           }
         />
       )}
+
+      {/* GitHub Integration Modal */}
+      <AnimatePresence>
+        {showGithubModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-card border border-border w-full max-w-md p-6 rounded-xl shadow-2xl"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <Github className="w-5 h-5" /> Import GitHub
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowGithubModal(false)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              <form onSubmit={handleConfirmGithub} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">
+                    GitHub Profile URL
+                  </label>
+                  <Input
+                    placeholder="https://github.com/username"
+                    value={githubInput}
+                    onChange={(e) => setGithubInput(e.target.value)}
+                    className="bg-background"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowGithubModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={githubStatus === "loading"}>
+                    {githubStatus === "loading" ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />{" "}
+                        Verifying...
+                      </>
+                    ) : (
+                      "Connect Profile"
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Notification Popup */}
+      <AnimatePresence>
+        {notification &&
+          (!activeChatUser || activeChatUser.id !== notification.senderId) && (
+            <motion.div
+              initial={{ y: 100, opacity: 0, scale: 0.8 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 100, opacity: 0, scale: 0.8 }}
+              whileHover={{ y: -5 }}
+              className="fixed bottom-8 right-8 bg-indigo-600 text-white px-6 py-4 rounded-[2rem] shadow-[0_20px_50px_rgba(79,70,229,0.4)] flex items-center gap-4 cursor-pointer z-[9999] border border-white/20"
+              onClick={handleNotificationClick}
+            >
+              <div className="bg-white/20 p-2.5 rounded-2xl ring-2 ring-white/10 relative">
+                <BellRing className="w-5 h-5 animate-pulse" />
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-indigo-600" />
+              </div>
+              <div className="flex-1 min-w-[150px]">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 leading-none mb-1">
+                  New Message
+                </p>
+                <p className="text-sm font-bold tracking-tight truncate max-w-[200px]">
+                  {notification.senderName}:{" "}
+                  <span className="font-normal opacity-90">
+                    {notification.content.substring(0, 20)}...
+                  </span>
+                </p>
+              </div>
+              <button
+                className="ml-2 p-1.5 hover:bg-white/20 rounded-full transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setNotification(null);
+                }}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </motion.div>
+          )}
+      </AnimatePresence>
     </div>
   );
 };

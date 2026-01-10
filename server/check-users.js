@@ -14,6 +14,7 @@ mongoose
       bio: String,
       github: String,
       mode: String,
+      resume: { type: String }, // Stores the path: "uploads/resume-123.pdf"
       isOnboarded: Boolean,
       swipedRight: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
       matches: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],

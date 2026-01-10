@@ -3,8 +3,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, X, Sparkles } from "lucide-react";
 import { UserProfile } from "@/pages/Dashboard";
-import Confetti from "react-confetti"; // Optional: npm install react-confetti
-import { useWindowSize } from "react-use"; // Optional: npm install react-use
+// import Confetti from "react-confetti"; // Optional: npm install react-confetti
+// import { useWindowSize } from "react-use"; // Optional: npm install react-use
 
 interface MatchDialogProps {
   isOpen: boolean;

@@ -228,40 +228,24 @@ export default function AuthPage() {
 
         {/* CHANGED: Reduced gap from space-y-5 to space-y-4 */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <AnimatePresence mode="popLayout">
-            {/* {!isLogin && (
-              <motion.div
-                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                animate={{ opacity: 1, height: "auto", marginBottom: 16 }}
-                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                transition={{ duration: 0.3, ease: "easeInOut" }}
-                className="overflow-hidden"
-              >
-                <div className="space-y-1.5">
-                  <Label
-                    htmlFor="name"
-                    className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 ml-1"
-                  >
-                    Full Name
-                  </Label>
-                  <div className="relative group">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
-                    <Input
-                      id="name"
-                      placeholder="Name"
-                      // CHANGED: Reduced height from h-11 to h-10
-                      className="bg-white/5 border-white/10 pl-9 h-10 focus:bg-white/10 focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all duration-300 rounded-xl placeholder:text-muted-foreground/40 text-sm"
-                      value={formData.name}
-                      onChange={(e) =>
-                        setFormData({ ...formData, name: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                </div>
-              </motion.div>
-            )} */}
-          </AnimatePresence>
+          {/* {!isLogin && (
+            <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
+              <div className="relative">
+                <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="name"
+                  placeholder="John Doe"
+                  className="bg-background/50 pl-10"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  required
+                />
+              </div>
+            </div>
+          )} */}
 
           <div className="space-y-1.5">
             <Label
