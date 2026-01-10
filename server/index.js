@@ -502,34 +502,58 @@ app.get("/api/messages/:partnerId", verifyToken, async (req, res) => {
 });
 
 // 6. IDEA SPARK (AI) - Now connects directly to Gemini
-// 6. IDEA SPARK (AI) - Now uses aiService.js
 app.post("/api/idea-spark", async (req, res) => {
   try {
-    const { mySkills, partnerSkills } = req.body;
+    // 1. Extract the new "Idea Forge" parameters from frontend
+    // Note: 'skills' is now an Array ["React", "AI"], 'teamSize' is a number
+    const { skills, theme, teamSize, mySkills } = req.body;
 
-    // Call the dedicated service function
-    console.log(`🤖 Generating ideas for: ${mySkills} + ${partnerSkills}`);
-    const ideas = await generateHackathonIdeas(mySkills, partnerSkills);
-
+    console.log(`🤖 AI Generating Request: ${teamSize} Units | Theme: ${theme || "General"}`);
+    
+    // 2. Fallback logic (Safety Net)
+    // If 'skills' array is missing, fall back to the old 'mySkills' string
+    const techStack = (skills && skills.length > 0) ? skills : (mySkills || "General Tech");
+    
+    // 3. Call the UPGRADED service function
+    // Pass the 3 specific parameters needed for the new prompt logic
+    const ideas = await generateHackathonIdeas(techStack, theme, teamSize);
+    
+    console.log(`🤖 AI Generated Ideas Successfully...🎉`);
     res.status(200).json({ ideas });
+
   } catch (error) {
-    console.error("Controller Error:", error.message);
+    console.error("❌ Controller Error:", error.message);
     res
       .status(500)
-      .json({ message: "AI generation failed, please try again." });
+      .json({ message: "AI Core Unreachable. Systems offline." });
   }
 });
 
 //8...hackathon finder
 app.get("/api/live-hackathons", async (req, res) => {
   try {
-    console.log("🤖 AI is searching for live hackathons...");
-    const hackathons = await findHackathons(); // This must match the imported name
-    res.json(hackathons);
-    console.log("🤖 AI Search Found Hackathons Successfully ...🎉");
+    console.log("📡 Initializing Hackathon Radar Scan...");
+
+    // 1. Call the AI function
+    // (This uses the 'findHackathons' function we defined earlier)
+    const hackathons = await findHackathons();
+
+    // 2. Safety Check: Ensure AI returned a valid array
+    if (!Array.isArray(hackathons)) {
+      console.warn("⚠️ AI returned invalid structure, serving empty array.");
+      return res.status(200).json([]); // Prevent frontend crash
+    }
+
+    // 3. Success Response
+    console.log(`✅ Scan Complete. Detected ${hackathons.length} live signals.`);
+    res.status(200).json(hackathons);
+
   } catch (error) {
-    console.error("AI Route Error:", error.message);
-    res.status(500).json({ message: "Failed to fetch AI hackathons" });
+    console.error("❌ Radar Offline:", error.message);
+    
+    // 4. Clean Error Response
+    // The frontend checks (!response.ok), so 500 triggers the fallback UI
+    res.status(500).json({ message: "Unable to establish uplink with event servers." });
   }
 });
 
