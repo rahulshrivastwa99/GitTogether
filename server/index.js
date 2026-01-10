@@ -43,11 +43,14 @@ app.use((req, res, next) => {
   next();
 });
 //---------- SOCKET.IO SETUP --------------------
-const server = http.createServer(app); // Wrap App in HTTP Server
+const server = http.createServer(app); 
 const io = new Server(server, {
   cors: {
-    origin: "allowedOrigins", // Allow all origins (Frontend URL)
+    // ❌ OLD (Wrong): origin: "allowedOrigins", 
+    // ✅ NEW (Correct): Remove the quotes to use your array variable
+    origin: allowedOrigins, 
     methods: ["GET", "POST"],
+    credentials: true
   },
 });
 
@@ -523,6 +526,7 @@ app.get("/api/live-hackathons", async (req, res) => {
     console.log("🤖 AI is searching for live hackathons...");
     const hackathons = await findHackathons(); // This must match the imported name
     res.json(hackathons);
+    console.log("🤖 AI Search Found Hackathons Successfully ...🎉");
   } catch (error) {
     console.error("AI Route Error:", error.message);
     res.status(500).json({ message: "Failed to fetch AI hackathons" });
