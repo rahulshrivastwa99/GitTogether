@@ -24,13 +24,28 @@ const Calendar = require("./models/calendar");
 const Agreement = require("./models/agreement");
 
 // -------------------- MIDDLEWARE --------------------
+
+const allowedOrigins = [
+  "http://localhost:8080",
+  "http://localhost:5173", // For local testing
+  "https://your-vercel-app-name.vercel.app" // 🔥 ADD YOUR VERCEL URL HERE
+];
+
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
+
+app.use((req, res, next) => {
+  console.log(`📢 Incoming Request: ${req.method} ${req.url}`);
+  next();
+});
 //---------- SOCKET.IO SETUP --------------------
 const server = http.createServer(app); // Wrap App in HTTP Server
 const io = new Server(server, {
   cors: {
-    origin: "*", // Allow all origins (Frontend URL)
+    origin: "allowedOrigins", // Allow all origins (Frontend URL)
     methods: ["GET", "POST"],
   },
 });

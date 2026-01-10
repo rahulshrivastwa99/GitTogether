@@ -18,7 +18,7 @@ import TeamAnalysis from "./pages/TeamAnalysis";
 import TeamAgreement from "./pages/TeamAgreement";
 import MyCalendar from "./pages/MyCalendar"; // ✅ ADDED
 
-console.log("API BASE URL:", import.meta.env.VITE_API_BASE_URL);
+// console.log("API BASE URL:", import.meta.env.VITE_API_BASE_URL);
 
 const queryClient = new QueryClient();
 
@@ -37,7 +37,10 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter  future={{
+    v7_startTransition: true,
+    v7_relativeSplatPath: true,
+  }}>
           <Routes>
             <Route path="/" element={<Landing />} />
 

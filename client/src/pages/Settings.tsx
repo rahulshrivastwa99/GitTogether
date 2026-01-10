@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import axios from "axios";
+import API_BASE_URL from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { Button } from "@/components/ui/button";
@@ -52,7 +53,7 @@ export default function Settings() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/user/me", {
+        const res = await axios.get(`${API_BASE_URL}/api/user/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setFormData(res.data);
@@ -106,7 +107,7 @@ export default function Settings() {
     setSaving(true);
     try {
       const res = await axios.put(
-        "http://localhost:5000/api/user/update",
+        `${API_BASE_URL}/api/user/update`,
         formData,
         {
           headers: { Authorization: `Bearer ${token}` },
