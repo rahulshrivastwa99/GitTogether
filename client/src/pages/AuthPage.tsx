@@ -5,18 +5,19 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { auth, googleProvider } from "../firebaseConfig";
+import { signInWithPopup } from "firebase/auth";
 import { toast } from "sonner";
 import API_BASE_URL from "@/lib/api";
 
 import axios from "axios";
 import {
-  Sparkles,
   Mail,
   ArrowRight,
   Loader2,
   AlertCircle,
   Lock,
-  User,
+  // User, // Kept imported but unused as per your commented out code
 } from "lucide-react";
 
 export default function AuthPage() {
@@ -24,23 +25,63 @@ export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     identifier: "",
     password: "",
     name: "",
   });
 
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  // --- GOOGLE LOGIN HANDLER ---
+  const handleGoogleLogin = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
 
+      console.log("Google User:", user); // Debugging
+
+      // Ensure URL is clean
+      const cleanBaseUrl = API_BASE_URL.replace(/\/+$/, "");
+      
+      // Send to Backend
+      const res = await axios.post(`${cleanBaseUrl}/api/google-login`, {
+        email: user.email,
+        name: user.displayName,
+        avatar: user.photoURL
+      });
+
+      // Log in to your app
+      login(res.data.token, res.data.user);
+      toast.success("Welcome via Google!");
+      
+      // Navigate based on onboarding status
+      if (res.data.user.isOnboarded) {
+        navigate("/dashboard");
+      } else {
+        navigate("/onboarding");
+      }
+
+    } catch (error) {
+      console.error("Google Login Error:", error);
+      toast.error("Google Login Failed");
+    }
+  };
+
+  // --- EMAIL/PASSWORD HANDLER ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
-    console.log("🚀 Attempting to connect to:", API_BASE_URL);
-    try {
-      const API_URL = `${API_BASE_URL}/api`;
 
+    // 🔥 URL CLEANUP: Prevents double slashes
+    const cleanBaseUrl = API_BASE_URL.replace(/\/+$/, "");
+    const API_URL = `${cleanBaseUrl}/api`;
+
+    console.log("🚀 Attempting to connect to:", API_URL);
+
+    try {
       if (isLogin) {
         // --- LOGIN LOGIC ---
         const response = await axios.post(`${API_URL}/login`, {
@@ -174,7 +215,6 @@ export default function AuthPage() {
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.6, type: "spring", bounce: 0.4 }}
-        // CHANGED: Reduced max-w-md to max-w-[400px] and p-8 to p-6 for a tighter look
         className="w-full max-w-[400px] bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-6 shadow-[0_0_50px_-10px_rgba(var(--primary),0.15)] relative z-10 group"
       >
         {/* Subtle Gradient Border Effect on Hover */}
@@ -189,13 +229,11 @@ export default function AuthPage() {
               scale: { delay: 0.2, type: "spring" },
               y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
             }}
-            // CHANGED: Reduced logo container size from w-16 h-16 to w-12 h-12
             className="w-12 h-12 bg-gradient-to-br from-white/10 to-white/5 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-white/10 shadow-[0_0_30px_-5px_rgba(255,255,255,0.1)] backdrop-blur-sm"
           >
             <img
               src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23222222'/%3E%3Ccircle cx='35' cy='40' r='12' fill='%23FF6B6B'/%3E%3Crect x='28' y='55' width='14' height='28' rx='7' fill='%23FF6B6B'/%3E%3Ccircle cx='65' cy='40' r='12' fill='%2342C2FF'/%3E%3Crect x='58' y='55' width='14' height='28' rx='7' fill='%2342C2FF'/%3E%3Cpath d='M35 65 Q50 50 65 65' stroke='%2300FF88' stroke-width='4' stroke-linecap='round' fill='none'/%3E%3Ccircle cx='50' cy='52' r='3' fill='%2300FF88'/%3E%3C/svg%3E"
               alt="GitTogether Logo"
-              // CHANGED: Reduced image size from w-10 to w-7
               className="w-7 h-7 rounded-lg drop-shadow-xl"
             />
           </motion.div>
@@ -208,7 +246,6 @@ export default function AuthPage() {
                 animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
                 exit={{ y: -20, opacity: 0, filter: "blur(4px)" }}
                 transition={{ duration: 0.3 }}
-                // CHANGED: Reduced font from text-3xl to text-2xl
                 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-white/50 absolute w-full tracking-tight"
               >
                 {isLogin ? "Welcome Back" : "Create Account"}
@@ -226,7 +263,34 @@ export default function AuthPage() {
           </motion.p>
         </div>
 
-        {/* CHANGED: Reduced gap from space-y-5 to space-y-4 */}
+        {/* 🔥 NEW GOOGLE BUTTON ADDED HERE */}
+        <div className="mb-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-10 border-white/10 bg-white/5 hover:bg-white/10 text-white font-medium rounded-xl flex items-center justify-center gap-2 transition-all"
+            onClick={handleGoogleLogin}
+          >
+            {/* Simple SVG Google Logo */}
+            <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26.81-.58z" fill="#FBBC05" />
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+            </svg>
+            Continue with Google
+          </Button>
+          
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-white/10" />
+            </div>
+            <div className="relative flex justify-center text-[10px] uppercase">
+              <span className="bg-[#0c0c0c] px-2 text-muted-foreground">Or continue with email</span>
+            </div>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* {!isLogin && (
             <div className="space-y-2">
@@ -260,7 +324,6 @@ export default function AuthPage() {
                 id="identifier"
                 type="email"
                 placeholder="name@example.com"
-                // CHANGED: Reduced height from h-11 to h-10
                 className="bg-white/5 border-white/10 pl-9 h-10 focus:bg-white/10 focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all duration-300 rounded-xl placeholder:text-muted-foreground/40 text-sm"
                 value={formData.identifier}
                 onChange={(e) =>
@@ -284,7 +347,6 @@ export default function AuthPage() {
                 id="password"
                 type="password"
                 placeholder="••••••••"
-                // CHANGED: Reduced height from h-11 to h-10
                 className="bg-white/5 border-white/10 pl-9 h-10 focus:bg-white/10 focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all duration-300 rounded-xl placeholder:text-muted-foreground/40 text-sm"
                 value={formData.password}
                 onChange={(e) =>
@@ -308,7 +370,6 @@ export default function AuthPage() {
 
           <Button
             type="submit"
-            // CHANGED: Reduced height from h-11 to h-10, mt-4 to mt-3
             className="w-full h-10 bg-gradient-to-r from-primary to-purple-600 hover:opacity-90 hover:scale-[1.01] active:scale-[0.98] transition-all duration-200 shadow-[0_0_20px_-5px_rgba(var(--primary),0.3)] font-bold rounded-xl mt-3 relative overflow-hidden group/btn text-sm"
             size="lg"
             disabled={isLoading}

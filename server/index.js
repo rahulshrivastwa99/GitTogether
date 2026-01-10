@@ -217,22 +217,6 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-// 1. Configure how files are stored
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/"); // Make sure this folder exists!
-  },
-  filename: (req, file, cb) => {
-    // This gives the file a unique name while keeping the extension (.pdf)
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(
-      null,
-      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
-    );
-  },
-});
-
-const upload = multer({ storage: storage });
 
 // -------------------- ROUTES --------------------
 
@@ -242,9 +226,9 @@ app.post("/api/signup", async (req, res) => {
     const { email, password, name } = req.body;
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: "User exists" });
-
+    
     const hashedPassword = await bcrypt.hash(password, 12);
-
+    
     // 🔥 FIX: Added default name and random gradient
     const newUser = new User({
       email,
@@ -301,6 +285,56 @@ app.post("/api/login", async (req, res) => {
     res.status(500).json({ message: "Login failed" });
   }
 });
+
+// GOOGLE LOGIN ROUTE
+app.post("/api/google-login", async (req, res) => {
+  try {
+    const { email, name, avatar } = req.body;
+    
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      // Create new user automatically
+      user = new User({
+        email,
+        name,
+        password: "google_login_" + Date.now(), // Secure dummy password
+        avatarGradient: avatar || "linear-gradient(to right, #6a11cb 0%, #2575fc 100%)",
+        isOnboarded: false
+      });
+      await user.save();
+    }
+
+    const token = jwt.sign(
+      { email: user.email, id: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "24h" }
+    );
+
+    res.status(200).json({ token, user, message: "Google Login successful" });
+  } catch (error) {
+    console.error("Google Auth Error:", error);
+    res.status(500).json({ message: "Auth Failed" });
+  }
+});
+
+// 1. Configure how files are stored
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/"); // Make sure this folder exists!
+  },
+  filename: (req, file, cb) => {
+    // This gives the file a unique name while keeping the extension (.pdf)
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(
+      null,
+      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
+    );
+  },
+});
+
+const upload = multer({ storage: storage });
+
 
 app.use("/uploads", express.static("uploads"));
 // 3. ONBOARDING
