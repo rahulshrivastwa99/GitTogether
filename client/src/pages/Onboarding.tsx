@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios"; // ✅ Added Axios for reliable FormData handling
 
 // --- IMPORTS ---
 import { Navbar } from "@/components/Navbar";
@@ -38,7 +39,7 @@ import {
 } from "@/components/ui/select";
 
 // --- CONFIGURATION ---
-const BACKEND_URL = `${API_BASE_URL}`;
+const BACKEND_URL = API_BASE_URL; // ✅ Simplified URL definition
 
 const techOptions = [
   "React",
@@ -150,26 +151,32 @@ const Onboarding = () => {
       formData.append("linkedin", profileData.linkedin);
       formData.append("portfolio", profileData.portfolio);
       formData.append("mode", selectedMode || "Chill");
+
+      // ✅ FIX: Send skills as a JSON string (Standard for FormData)
       formData.append("skills", JSON.stringify(selectedTech));
 
       if (resumeFile) {
         formData.append("resume", resumeFile);
       }
 
-      const response = await fetch(`${BACKEND_URL}/api/onboarding`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+      // ✅ FIX: Switched to Axios for stable Multipart/Form-Data handling
+      await axios.post(`${BACKEND_URL}/api/onboarding`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
       });
-
-      if (!response.ok) throw new Error("Failed to save profile");
 
       completeOnboarding();
       toast.success("Profile setup complete! Welcome aboard 🚀");
       navigate("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to save profile:", error);
-      toast.error("Failed to save profile. Please try again.");
+      // Enhanced error message
+      const msg =
+        error.response?.data?.message ||
+        "Failed to save profile. Please check your data.";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
