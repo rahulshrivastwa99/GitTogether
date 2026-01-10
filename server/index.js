@@ -1,5 +1,6 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const pdf = require('pdf-parse');
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -22,6 +23,7 @@ const { findHackathons } = require("./services/findHack"); // <-- Add this line
 // const { generateHackathonIdeas } = require("./services/aiService");
 const Calendar = require("./models/calendar");
 const Agreement = require("./models/agreement");
+const { extractSkillsFromPDF } = require('./services/geminiService');
 
 // -------------------- MIDDLEWARE --------------------
 
@@ -338,15 +340,39 @@ app.use("/uploads", express.static("uploads"));
 
 
 // Add 'upload.single("resume")' as middleware to this specific route
+// const pdf = require('pdf-parse');
+// const { GoogleGenerativeAI } = require("@google-generative-ai");
+
+// Initialize Gemini
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
 app.post("/api/onboarding", verifyToken, upload.single("resume"), async (req, res) => {
   try {
     // 1. Extract all fields from req.body (Matches your Onboarding.tsx fields)
     const { name, college, role, skills, bio, github, linkedin, portfolio, mode } = req.body;
     
     let resumeData = "";
+    let aiSuggestedSkills = [];
 
     // 2. Convert PDF buffer to Base64 String if file exists
     if (req.file) {
+      // --- AI EXTRACTION START ---
+      try {
+        const parsePdf = typeof pdf === 'function' ? pdf : pdf.default;
+        const data = await pdf(req.file.buffer);
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+        const prompt = `Analyze this resume text and return ONLY a JSON array of technical skills (languages, frameworks, tools). Text: ${data.text}`;
+        
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const cleanedText = response.text().replace(/```json|```/g, "").trim();
+        aiSuggestedSkills = JSON.parse(cleanedText);
+        console.log("AI Suggested Skills:", aiSuggestedSkills);
+      } catch (aiErr) {
+        console.error("AI Skill Extraction failed, but continuing with save:", aiErr);
+      }
+      // --- AI EXTRACTION END ---
+
       // Create a "Data URL" (e.g., data:application/pdf;base64,JVBERi...)
       const b64 = Buffer.from(req.file.buffer).toString("base64");
       resumeData = `data:${req.file.mimetype};base64,${b64}`;
@@ -365,7 +391,8 @@ app.post("/api/onboarding", verifyToken, upload.single("resume"), async (req, re
       linkedin,
       portfolio,
       mode,
-      skills: parsedSkills,
+      // Merge AI skills with user selected skills if desired, or keep as is
+      skills: parsedSkills, 
       isOnboarded: true
     };
 
@@ -381,11 +408,38 @@ app.post("/api/onboarding", verifyToken, upload.single("resume"), async (req, re
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.status(200).json({ message: "Profile updated successfully 🚀", user });
+    // Returning suggested skills so your frontend can show "AI suggested these tags"
+    res.status(200).json({ 
+      message: "Profile updated successfully 🚀", 
+      user,
+      aiSuggestedSkills 
+    });
 
   } catch (error) {
     console.error("Onboarding Update Error:", error);
     res.status(500).json({ message: "Update failed", error: error.message });
+  }
+});
+
+
+app.get("/api/test-ai", async (req, res) => {
+  try {
+    // Sample text to simulate what pdf-parse would extract
+    const sampleText = "John Doe. Skills: React, Node.js, MongoDB, Python, Docker.";
+    
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+    const prompt = `Analyze this text and return ONLY a JSON array of technical skills: ${sampleText}`;
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const cleanedText = response.text().replace(/```json|```/g, "").trim();
+    console.log("AI Testing oF resume parsing Successfull...🎉");
+    res.json({ 
+      status: "AI is working!", 
+      foundSkills: JSON.parse(cleanedText) 
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 

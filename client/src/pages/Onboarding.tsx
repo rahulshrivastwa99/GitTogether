@@ -16,7 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios"; // ✅ Added Axios for reliable FormData handling
+import axios from "axios";
 
 // --- IMPORTS ---
 import { Navbar } from "@/components/Navbar";
@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/select";
 
 // --- CONFIGURATION ---
-const BACKEND_URL = API_BASE_URL; // ✅ Simplified URL definition
+const BACKEND_URL = API_BASE_URL;
 
 const techOptions = [
   "React",
@@ -118,10 +118,37 @@ const Onboarding = () => {
     );
   };
 
+  // ✅ ADDED: AI Resume Analysis logic
+  const analyzeResume = async (file: File) => {
+    const formData = new FormData();
+    formData.append("resume", file);
+
+    try {
+      toast.info("AI is analyzing your resume for skills...");
+      const response = await axios.post(`${BACKEND_URL}/api/onboarding`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (response.data.aiSuggestedSkills) {
+        // Automatically select the skills Gemini found
+        setSelectedTech(response.data.aiSuggestedSkills);
+        toast.success("AI suggested skills loaded!");
+      }
+    } catch (error) {
+      console.error("AI Analysis failed", error);
+      // We don't toast error here because this is an automated background task
+    }
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setResumeFile(e.target.files[0]);
+      const file = e.target.files[0];
+      setResumeFile(file);
       toast.success("Resume attached!");
+      analyzeResume(file); // ✅ Trigger AI analysis
     }
   };
 
@@ -129,8 +156,10 @@ const Onboarding = () => {
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setResumeFile(e.dataTransfer.files[0]);
+      const file = e.dataTransfer.files[0];
+      setResumeFile(file);
       toast.success("Resume attached!");
+      analyzeResume(file); // ✅ Trigger AI analysis
     }
   };
 
@@ -151,15 +180,12 @@ const Onboarding = () => {
       formData.append("linkedin", profileData.linkedin);
       formData.append("portfolio", profileData.portfolio);
       formData.append("mode", selectedMode || "Chill");
-
-      // ✅ FIX: Send skills as a JSON string (Standard for FormData)
       formData.append("skills", JSON.stringify(selectedTech));
 
       if (resumeFile) {
         formData.append("resume", resumeFile);
       }
 
-      // ✅ FIX: Switched to Axios for stable Multipart/Form-Data handling
       await axios.post(`${BACKEND_URL}/api/onboarding`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -172,10 +198,7 @@ const Onboarding = () => {
       navigate("/dashboard");
     } catch (error: any) {
       console.error("Failed to save profile:", error);
-      // Enhanced error message
-      const msg =
-        error.response?.data?.message ||
-        "Failed to save profile. Please check your data.";
+      const msg = error.response?.data?.message || "Failed to save profile. Please check your data.";
       toast.error(msg);
     } finally {
       setLoading(false);
