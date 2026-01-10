@@ -34,6 +34,11 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
   },
 });
+
+app.get("/", (req, res) => {
+  res.send("GitTogether Backend is running 🚀");
+});
+
 // -------------------- MONGODB --------------------
 mongoose
   .connect(process.env.MONGO_URI)
