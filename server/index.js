@@ -28,7 +28,8 @@ const Agreement = require("./models/agreement");
 const allowedOrigins = [
   "http://localhost:8080",
   "http://localhost:5173", // For local testing
-  "https://your-vercel-app-name.vercel.app" // 🔥 ADD YOUR VERCEL URL HERE
+  "https://git-together-one.vercel.app", // 🔥 ADD YOUR VERCEL URL HERE
+  "https://gittogether-epg7.onrender.com" // 🔥 ADD YOUR VERCEL URL HERE
 ];
 
 app.use(express.json());
