@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+// import {Sparkles} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { io, Socket } from "socket.io-client";
@@ -178,7 +179,56 @@ export function ChatInterface({ partner, isOpen, onClose }: ChatProps) {
               <div className="text-white">
                 <h3 className="font-bold text-base tracking-tight leading-none mb-1 flex items-center gap-1.5 drop-shadow-sm">
                   {partnerName}
-                  <Sparkles className="w-3 h-3 text-yellow-300" />
+                  {/* ✨ SPARKLE SVG ICON - INLINE SVG */}
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 100 100"
+                    fill="none"
+                    className="drop-shadow-lg"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <circle
+                      cx="35"
+                      cy="40"
+                      r="14"
+                      fill="#F59E0B"
+                      opacity="0.95"
+                    />
+                    <rect
+                      x="26"
+                      y="54"
+                      width="18"
+                      height="32"
+                      rx="8"
+                      fill="#F59E0B"
+                      opacity="0.95"
+                    />
+                    <circle
+                      cx="65"
+                      cy="40"
+                      r="14"
+                      fill="#3B82F6"
+                      opacity="0.95"
+                    />
+                    <rect
+                      x="56"
+                      y="54"
+                      width="18"
+                      height="32"
+                      rx="8"
+                      fill="#3B82F6"
+                      opacity="0.95"
+                    />
+                    <path
+                      d="M35 68 Q50 48 65 68"
+                      stroke="#10B981"
+                      strokeWidth="5"
+                      strokeLinecap="round"
+                      fill="none"
+                    />
+                    <circle cx="50" cy="55" r="4" fill="#10B981" />
+                  </svg>
                 </h3>
                 <div className="flex items-center gap-1 opacity-90">
                   <ShieldCheck className="w-3 h-3 text-green-300" />
@@ -197,7 +247,6 @@ export function ChatInterface({ partner, isOpen, onClose }: ChatProps) {
               <X className="w-6 h-6" />
             </Button>
           </div>
-
           {/* MESSAGE CONTAINER */}
           <div className="flex-1 p-5 overflow-y-auto space-y-4 bg-white dark:bg-zinc-900/10 scroll-smooth custom-scrollbar">
             {loading ? (
@@ -262,7 +311,6 @@ export function ChatInterface({ partner, isOpen, onClose }: ChatProps) {
               </div>
             )}
           </div>
-
           {/* INPUT AREA */}
           <div className="p-5 border-t border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-md shrink-0">
             <div className="flex gap-2 items-center bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-1.5 focus-within:ring-2 focus-within:ring-indigo-500/30 transition-all shadow-sm">

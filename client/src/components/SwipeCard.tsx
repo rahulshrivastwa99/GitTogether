@@ -1,269 +1,236 @@
-import { motion, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import {
-  Github,
-  Linkedin,
-  Code2,
-  GraduationCap,
-  MapPin,
-  Info,
-} from "lucide-react";
+  motion,
+  useMotionValue,
+  useTransform,
+  PanInfo,
+  animate,
+} from "framer-motion";
+import { Github, Linkedin, Code2, GraduationCap, Info } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { UserProfile } from "@/pages/Dashboard";
-import { RiskBadge } from "./RiskBadge"; // Ensure this exists
+
+// Removed RiskBadge import if not used, or keep it if needed
 
 interface SwipeCardProps {
   user: UserProfile;
   onSwipe: (direction: "left" | "right") => void;
   isTop: boolean;
-  exitDirection: "left" | "right";
+  exitDirection: "left" | "right"; // Kept for type safety, though we handle movement manually now
 }
 
-export const SwipeCard = ({
-  user,
-  onSwipe,
-  isTop,
-  exitDirection,
-}: SwipeCardProps) => {
-  // Motion Values for Dragging
+export const SwipeCard = ({ user, onSwipe, isTop }: SwipeCardProps) => {
+  // Motion Values
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-200, 200], [-25, 25]);
+  const rotate = useTransform(x, [-200, 200], [-15, 15]);
   const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0]);
 
   // Swipe Indicators Opacity
-  const passOpacity = useTransform(x, [-150, -50], [1, 0]);
-  const likeOpacity = useTransform(x, [50, 150], [0, 1]);
+  const passOpacity = useTransform(x, [-100, -20], [1, 0]);
+  const likeOpacity = useTransform(x, [20, 100], [0, 1]);
 
+  // --- FIX 1: REMOVED 'x' FROM VARIANTS ---
+  // We only use variants for opacity and scale now.
+  // The 'x' movement is handled by the motion value directly.
   const variants = {
-    initial: { scale: 0.95, y: 10, opacity: 0 },
+    initial: { scale: 0.95, y: 0, opacity: 0 },
     animate: { scale: 1, y: 0, opacity: 1 },
     exit: {
-      x: exitDirection === "left" ? -500 : 500,
+      scale: 0.95,
       opacity: 0,
-      rotate: exitDirection === "left" ? -20 : 20,
-      transition: { duration: 0.3 },
+      transition: { duration: 0.2 },
     },
   };
 
+  // --- FIX 2: HANDLE ANIMATION IN DRAG END ---
   const handleDragEnd = (_: any, info: PanInfo) => {
     const threshold = 100;
+    const swipeVelocity = 500; // How far to throw the card
+
     if (info.offset.x > threshold) {
+      // SWIPE RIGHT
+      // 1. Manually animate 'x' to fly off screen
+      animate(x, swipeVelocity, { duration: 0.3 });
+      // 2. Trigger the state change
       onSwipe("right");
     } else if (info.offset.x < -threshold) {
+      // SWIPE LEFT
+      animate(x, -swipeVelocity, { duration: 0.3 });
       onSwipe("left");
+    } else {
+      // RESET
+      animate(x, 0, { duration: 0.3 });
     }
   };
 
   return (
     <motion.div
       style={{
-        x: isTop ? x : 0,
+        x, // Binds the motion value to the element
         rotate: isTop ? rotate : 0,
         opacity: isTop ? opacity : 1,
-        zIndex: isTop ? 10 : 5,
+        zIndex: isTop ? 50 : 10,
       }}
       variants={variants}
       initial="initial"
       animate="animate"
       exit="exit"
-      className={`absolute w-full max-w-sm h-[600px] ${
-        isTop ? "z-10 cursor-grab active:cursor-grabbing" : "z-0"
+      className={`absolute w-full max-w-[340px] h-[520px] ${
+        isTop ? "cursor-grab active:cursor-grabbing" : "pointer-events-none"
       }`}
       drag={isTop ? "x" : false}
-      dragConstraints={{ left: 0, right: 0 }}
+      dragConstraints={{ left: 0, right: 0 }} // Optional: adds resistance
+      dragElastic={0.6} // Adds a nice elastic feel
       onDragEnd={handleDragEnd}
+      whileTap={{ scale: 0.98 }}
     >
-      {/* Swipe Indicators (Like/Nope) */}
+      {/* --- SWIPE INDICATORS --- */}
       {isTop && (
         <>
           <motion.div
             style={{ opacity: passOpacity }}
-            className="absolute top-10 right-10 z-20 border-4 border-red-500 text-red-500 font-black text-3xl px-4 py-2 rounded-xl rotate-12 pointer-events-none bg-black/40 backdrop-blur-md"
+            className="absolute top-12 right-8 z-[60] border-4 border-red-500 text-red-500 font-black text-4xl px-4 py-2 rounded-lg rotate-12 bg-black/50 backdrop-blur-sm shadow-xl pointer-events-none tracking-widest"
           >
             NOPE
           </motion.div>
           <motion.div
             style={{ opacity: likeOpacity }}
-            className="absolute top-10 left-10 z-20 border-4 border-green-500 text-green-500 font-black text-3xl px-4 py-2 rounded-xl -rotate-12 pointer-events-none bg-black/40 backdrop-blur-md"
+            className="absolute top-12 left-8 z-[60] border-4 border-green-500 text-green-500 font-black text-4xl px-4 py-2 rounded-lg -rotate-12 bg-black/50 backdrop-blur-sm shadow-xl pointer-events-none tracking-widest"
           >
             LIKE
           </motion.div>
         </>
       )}
 
-      {/* GLASSMORPHISM CARD */}
-      <Card className="relative h-full w-full overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-b from-gray-900/90 to-black/90 backdrop-blur-2xl shadow-2xl">
-        {/* Animated Background Gradient */}
+      {/* --- MAIN CARD --- */}
+      <Card className="relative h-full w-full overflow-hidden rounded-[2rem] border border-white/10 bg-zinc-950 shadow-2xl">
+        {/* Background Gradients */}
+        <div className="absolute inset-0 bg-gradient-to-b from-zinc-800/50 to-zinc-950 z-0" />
         <div
-          className="absolute inset-0 opacity-20 blur-3xl"
+          className="absolute -top-20 -right-20 w-64 h-64 rounded-full opacity-30 blur-[80px]"
           style={{ background: user.avatarGradient }}
         />
+        <div className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-blue-900/20 blur-[80px]" />
 
-        {/* --- CARD CONTENT --- */}
-        <div className="relative h-full flex flex-col p-6 z-10">
-          {/* Avatar Section */}
-          <div className="flex flex-col items-center mt-6 mb-4 relative">
-            <div className="relative group">
-              <div
-                className="absolute -inset-1 rounded-full blur opacity-40 group-hover:opacity-75 transition duration-1000"
-                style={{ background: user.avatarGradient }}
-              ></div>
-              <div className="relative w-28 h-28 rounded-full p-1 bg-black">
-                <div className="w-full h-full rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden border-2 border-white/10">
-                  <span className="text-4xl font-bold text-white/90">
-                    {user.name[0]}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Trigger (Click Name to Open Profile) */}
-            <Dialog>
-              <DialogTrigger asChild>
-                <div className="cursor-pointer group text-center mt-4">
-                  <h2 className="text-2xl font-bold text-white group-hover:text-blue-400 transition-colors flex items-center justify-center gap-2">
-                    {user.name} <Info className="w-4 h-4 opacity-50" />
-                  </h2>
-                  <div className="flex items-center justify-center gap-2 text-white/50 text-xs mt-1 uppercase tracking-widest font-medium">
-                    <GraduationCap className="w-3 h-3" />
-                    <span>{user.college}</span>
-                  </div>
-                </div>
-              </DialogTrigger>
-
-              {/* --- MODAL CONTENT --- */}
-              <DialogContent className="sm:max-w-2xl bg-zinc-950 border-zinc-800 text-white">
-                <DialogHeader>
-                  <DialogTitle className="text-2xl font-bold flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-sm"
-                      style={{ background: user.avatarGradient }}
-                    >
-                      {user.name[0]}
-                    </div>
-                    {user.name}
-                  </DialogTitle>
-                  <div className="flex items-center gap-3 mt-2">
-                    <Badge variant="outline" className="border-zinc-700">
-                      {user.role}
-                    </Badge>
-                    {/* RISK BADGE IN MODAL */}
-                    {user.stats && (
-                      <RiskBadge
-                        completionRate={user.stats.completionRate}
-                        activityLevel={user.stats.activityLevel}
-                        availability={user.stats.availability}
-                      />
-                    )}
-                  </div>
-                </DialogHeader>
-
-                <ScrollArea className="h-[400px] w-full rounded-md border border-zinc-800 p-4 bg-zinc-900/50">
-                  <div className="space-y-6">
-                    {/* Bio */}
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2 text-zinc-300">
-                        About
-                      </h3>
-                      <p className="text-zinc-400 leading-relaxed">
-                        {user.bio}
-                      </p>
-                    </div>
-
-                    {/* Achievements */}
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2 text-zinc-300">
-                        🏆 Achievements
-                      </h3>
-                      <ul className="list-disc list-inside text-zinc-400 space-y-1">
-                        {user.achievements.map((ach, i) => (
-                          <li key={i}>{ach}</li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {/* Tech Stack */}
-                    <div>
-                      <h3 className="text-lg font-semibold mb-2 text-zinc-300">
-                        ⚡ Tech Stack
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {user.techStack.map((tech) => (
-                          <Badge
-                            key={tech}
-                            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300"
-                          >
-                            {tech}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </ScrollArea>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {/* Role Badge (On Card) */}
-          <div className="flex justify-center mb-4">
+        {/* Content */}
+        <div className="relative h-full flex flex-col p-5 z-10">
+          {/* Header */}
+          <div className="flex justify-between items-start w-full mb-2">
             <Badge
               variant="outline"
-              className="border-white/10 bg-white/5 text-white/90 px-4 py-1.5 text-xs font-bold uppercase tracking-widest shadow-lg"
+              className="border-white/10 bg-black/30 backdrop-blur-md text-white/80 text-[10px] uppercase tracking-wider"
             >
               {user.role}
             </Badge>
-          </div>
-
-          {/* Risk Badge (On Card - Floating) */}
-          <div className="absolute top-4 right-4">
             {user.stats && (
-              // Simple visual indicator for card view
-              <div
-                className={`w-3 h-3 rounded-full ${
-                  user.stats.activityLevel === "High"
-                    ? "bg-green-500"
-                    : "bg-yellow-500"
-                } shadow-[0_0_10px_currentColor]`}
-              />
+              <div className="flex items-center gap-2 bg-black/30 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    user.stats.activityLevel === "High"
+                      ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+                      : "bg-yellow-400"
+                  }`}
+                />
+                <span className="text-[10px] text-white/70 font-medium">
+                  {user.stats.activityLevel} Activity
+                </span>
+              </div>
             )}
           </div>
 
-          {/* Skills Grid (Limited) */}
-          <div className="flex flex-wrap gap-2 justify-center mb-6">
-            {user.techStack.slice(0, 4).map((tech) => (
-              <span
-                key={tech}
-                className="px-3 py-1 rounded-md bg-zinc-800/50 border border-white/5 text-xs text-zinc-300 font-mono"
-              >
-                {tech}
-              </span>
-            ))}
-          </div>
+          {/* Avatar Area */}
+          <div className="flex flex-col items-center justify-center flex-1 -mt-4">
+            <div className="relative group cursor-pointer">
+              <div
+                className="absolute -inset-1 rounded-full opacity-60 blur-md group-hover:opacity-100 transition duration-700"
+                style={{ background: user.avatarGradient }}
+              ></div>
 
-          {/* Bio Quote */}
-          <div className="bg-zinc-900/50 rounded-xl p-4 mb-auto border border-white/5 relative">
-            <div className="absolute top-2 left-2 text-white/10 text-2xl font-serif">
-              "
+              <Dialog>
+                <DialogTrigger asChild>
+                  <div className="relative w-32 h-32 rounded-full p-1 bg-zinc-950 border-2 border-white/10 shadow-2xl hover:scale-105 transition-transform duration-300">
+                    <div className="w-full h-full rounded-full bg-zinc-900 flex items-center justify-center overflow-hidden">
+                      <span className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-white to-white/50">
+                        {user.name[0]}
+                      </span>
+                    </div>
+                  </div>
+                </DialogTrigger>
+
+                <DialogContent className="sm:max-w-2xl bg-zinc-950 border-zinc-800 text-white">
+                  <DialogHeader>
+                    <DialogTitle className="text-2xl font-bold flex items-center gap-3">
+                      {user.name}
+                    </DialogTitle>
+                    <div className="text-zinc-400 text-sm">{user.bio}</div>
+                  </DialogHeader>
+                  <ScrollArea className="h-[400px]">
+                    <div className="p-4 space-y-4">
+                      <div>
+                        <h4 className="font-bold text-zinc-300">Tech Stack</h4>
+                        <div className="flex gap-2 mt-2 flex-wrap">
+                          {user.techStack.map((t) => (
+                            <Badge key={t} variant="secondary">
+                              {t}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </ScrollArea>
+                </DialogContent>
+              </Dialog>
             </div>
-            <p className="text-sm text-zinc-400 leading-relaxed text-center px-2 line-clamp-3">
-              {user.bio}
-            </p>
+
+            <div className="text-center mt-5">
+              <h2 className="text-3xl font-black text-white tracking-tight flex items-center justify-center gap-2">
+                {user.name}
+                <Info className="w-4 h-4 text-zinc-500 hover:text-white transition-colors cursor-pointer" />
+              </h2>
+              <div className="flex items-center justify-center gap-1.5 text-zinc-400 text-sm mt-1 font-medium">
+                <GraduationCap className="w-4 h-4 text-indigo-400" />
+                <span>{user.college}</span>
+              </div>
+            </div>
           </div>
 
-          {/* Footer Icons */}
-          <div className="flex justify-center gap-8 mt-4 pt-6 border-t border-white/5">
-            <Github className="w-5 h-5 text-white/70 hover:text-white cursor-pointer transition-colors" />
-            <Linkedin className="w-5 h-5 text-white/70 hover:text-blue-400 cursor-pointer transition-colors" />
-            <Code2 className="w-5 h-5 text-white/70 hover:text-green-400 cursor-pointer transition-colors" />
+          {/* Footer Area */}
+          <div className="mt-auto space-y-4 w-full">
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {user.techStack.slice(0, 3).map((tech) => (
+                <span
+                  key={tech}
+                  className="px-2.5 py-1 rounded-md bg-white/5 border border-white/5 text-[11px] font-semibold text-zinc-300"
+                >
+                  {tech}
+                </span>
+              ))}
+              {user.techStack.length > 3 && (
+                <span className="px-2 py-1 text-[10px] text-zinc-500">
+                  +{user.techStack.length - 3}
+                </span>
+              )}
+            </div>
+
+            <div className="bg-white/5 rounded-xl p-3 border border-white/5 backdrop-blur-sm">
+              <p className="text-xs text-zinc-300 text-center italic line-clamp-2">
+                "{user.bio}"
+              </p>
+            </div>
+
+            <div className="flex justify-center gap-6 pt-2 pb-1">
+              <Github className="w-5 h-5 text-zinc-500 hover:text-white hover:scale-110 transition-all cursor-pointer" />
+              <Linkedin className="w-5 h-5 text-zinc-500 hover:text-blue-400 hover:scale-110 transition-all cursor-pointer" />
+              <Code2 className="w-5 h-5 text-zinc-500 hover:text-emerald-400 hover:scale-110 transition-all cursor-pointer" />
+            </div>
           </div>
         </div>
       </Card>
