@@ -4,7 +4,6 @@ import axios from "axios";
 import { io, Socket } from "socket.io-client";
 import {
   MessageCircle,
-  Filter,
   Zap,
   Loader2,
   X,
@@ -12,8 +11,8 @@ import {
   PanelRight,
   PanelRightClose,
   BellRing,
-  Github, // Restored
-  Check, // Restored
+  Github,
+  Check,
 } from "lucide-react";
 
 // --- COMPONENTS ---
@@ -24,7 +23,7 @@ import { SwipeControls } from "@/components/SwipeControls";
 import { UserSearch } from "@/components/UserSearch";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input"; // Restored
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // --- NEW FEATURES IMPORTS ---
@@ -43,6 +42,11 @@ export interface UserProfile {
   techStack: string[];
   achievements: string[];
   avatarGradient: string;
+  github?: string;
+  linkedin?: string;
+  portfolio?: string;
+  resume?: string;
+  mode?: string;
   college: string;
   stats: {
     completionRate: number;
@@ -56,8 +60,6 @@ export interface HackathonEvent {
   date: string;
   status: string;
 }
-
-const filters = ["All", "Frontend", "Backend", "AI/ML", "Design", "Web3"];
 
 const Dashboard = () => {
   const { userEmail, token } = useAuth();
@@ -80,14 +82,14 @@ const Dashboard = () => {
     null
   );
 
-  // --- NOTIFICATION STATE (From Code 2) ---
+  // --- NOTIFICATION STATE ---
   const [notification, setNotification] = useState<{
     senderId: string;
     senderName: string;
     content: string;
   } | null>(null);
 
-  // --- GITHUB STATE (Restored from Code 1) ---
+  // --- GITHUB STATE ---
   const [showGithubModal, setShowGithubModal] = useState(false);
   const [githubInput, setGithubInput] = useState("");
   const [githubStatus, setGithubStatus] = useState<
@@ -101,15 +103,13 @@ const Dashboard = () => {
   const [matches, setMatches] = useState<UserProfile[]>([]);
   const [sentRequests, setSentRequests] = useState<UserProfile[]>([]);
   const [receivedRequests, setReceivedRequests] = useState<UserProfile[]>([]);
-
-  // Restored Hackathon State (even if unused in UI currently)
   const [upcomingHackathons, setUpcomingHackathons] = useState<
     HackathonEvent[]
   >([]);
 
   const [loading, setLoading] = useState(true);
 
-  // --- SOCKET REF (Optimized from Code 2) ---
+  // --- SOCKET REF ---
   const socketRef = useRef<Socket | null>(null);
 
   const myProfile = {
@@ -130,12 +130,10 @@ const Dashboard = () => {
   useEffect(() => {
     if (!token) return;
 
-    // Get My ID from Token
     const base64Url = token.split(".")[1];
     const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
     const myId = JSON.parse(window.atob(base64)).id;
 
-    // Singleton Pattern for Socket (Prevents re-connection loops)
     if (!socketRef.current) {
       socketRef.current = io("http://localhost:5000");
     }
@@ -143,9 +141,7 @@ const Dashboard = () => {
 
     socket.emit("join_room", myId);
 
-    // MATCH LISTENER
     socket.on("match_found", (data) => {
-      console.log("🔥 Real-time Match Found:", data);
       const matchedProfile: UserProfile = {
         id: data.id,
         _id: data.id,
@@ -153,8 +149,13 @@ const Dashboard = () => {
         role: data.role || "Developer",
         avatarGradient: data.avatarGradient,
         college: data.college || "Hackathon Partner",
-        bio: "",
-        techStack: [],
+        bio: data.bio || "",
+        techStack: data.skills || [],
+        github: data.github,
+        linkedin: data.linkedin,
+        portfolio: data.portfolio,
+        resume: data.resume,
+        mode: data.mode,
         achievements: [],
         stats: {
           completionRate: 100,
@@ -167,16 +168,14 @@ const Dashboard = () => {
       setMatches((prev) => [matchedProfile, ...prev]);
     });
 
-    // GLOBAL MESSAGE LISTENER
     socket.on("receive_message", (msg) => {
-      if (msg.sender === myId) return; // Don't notify if I sent it
+      if (msg.sender === myId) return;
 
       setNotification((prev) => {
         const sender = allUsers.find(
           (u) => u.id === msg.sender || u._id === msg.sender
         );
         const senderName = sender ? sender.name : "New Message";
-
         return {
           senderId: msg.sender,
           senderName: senderName,
@@ -191,26 +190,21 @@ const Dashboard = () => {
     };
   }, [token, allUsers]);
 
-  // Handle Notification Click
   const handleNotificationClick = () => {
     if (notification) {
       const user = allUsers.find(
         (u) => u.id === notification.senderId || u._id === notification.senderId
       );
-      if (user) {
-        setActiveChatUser(user);
-      }
+      if (user) setActiveChatUser(user);
       setNotification(null);
     }
   };
 
-  // --- GITHUB HANDLER (Restored) ---
   const handleConfirmGithub = (e: React.FormEvent) => {
     e.preventDefault();
     if (!githubInput) return;
     setGithubStatus("loading");
 
-    // Simulating API call
     setTimeout(() => {
       let url = githubInput;
       if (!url.startsWith("http")) {
@@ -251,6 +245,11 @@ const Dashboard = () => {
         college: u.college || "Unknown College",
         bio: u.bio || "Ready to code.",
         techStack: u.skills || [],
+        github: u.github, // Mapped from backend
+        linkedin: u.linkedin,
+        portfolio: u.portfolio,
+        resume: u.resume,
+        mode: u.mode,
         achievements: [],
         avatarGradient:
           u.avatarGradient ||
@@ -279,13 +278,18 @@ const Dashboard = () => {
         college: u.college,
         bio: u.bio,
         techStack: u.skills || [],
+        github: u.github,
+        linkedin: u.linkedin,
+        portfolio: u.portfolio,
+        resume: u.resume,
+        mode: u.mode,
         avatarGradient:
           u.avatarGradient ||
           "linear-gradient(135deg, #FF6B6B 0%, #556270 100%)",
       }));
       setMatches(mappedMatches);
     } catch (error) {
-      console.log("Matches fetch skipped or failed");
+      console.log("Matches fetch failed");
     }
   }, [token]);
 
@@ -393,7 +397,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* RESTORED: GitHub Connect Button */}
       <Button
         variant="outline"
         size="sm"
@@ -595,7 +598,7 @@ const Dashboard = () => {
         />
       )}
 
-      {/* RESTORED & REBUILT: GitHub Integration Modal */}
+      {/* GitHub Integration Modal */}
       <AnimatePresence>
         {showGithubModal && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -654,7 +657,7 @@ const Dashboard = () => {
         )}
       </AnimatePresence>
 
-      {/* GLOBAL NOTIFICATION POPUP (From Code 2) */}
+      {/* Notification Popup */}
       <AnimatePresence>
         {notification &&
           (!activeChatUser || activeChatUser.id !== notification.senderId) && (

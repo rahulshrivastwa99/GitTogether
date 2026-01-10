@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner"; // ✅ Added Toast
+import { toast } from "sonner";
 import {
   Upload,
   ArrowRight,
@@ -9,6 +9,11 @@ import {
   User,
   GraduationCap,
   Loader2,
+  Github,
+  Linkedin,
+  Globe,
+  FileText,
+  X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -23,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -57,39 +63,54 @@ const modes = [
     emoji: "🔥",
     title: "Beast Mode",
     description: "Here to win. No sleep.",
-    variant: "beast" as const,
+    variant: "beast",
   },
   {
     emoji: "☕",
     title: "Chill Mode",
     description: "Here to learn & vibe.",
-    variant: "chill" as const,
+    variant: "chill",
   },
   {
     emoji: "🎓",
     title: "Newbie Mode",
     description: "First timer. Help me.",
-    variant: "newbie" as const,
+    variant: "newbie",
   },
 ];
 
 const Onboarding = () => {
   const navigate = useNavigate();
   const { token, completeOnboarding } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
   const [selectedTech, setSelectedTech] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [noGithub, setNoGithub] = useState(false);
 
-  // --- PROFILE DATA STATE ---
   const [profileData, setProfileData] = useState({
     name: "",
     college: "",
     bio: "",
     role: "Frontend",
+    github: "",
+    linkedin: "",
+    portfolio: "",
   });
+
+  // --- FIXED canProceed (NO useMemo - direct function) ---
+  const canProceed = () => {
+    if (step === 1)
+      return profileData.name.length > 0 && profileData.college.length > 0;
+    if (step === 2) return profileData.github.length > 0 || noGithub;
+    if (step === 3) return selectedMode !== null;
+    if (step === 4) return selectedTech.length > 0;
+    return false;
+  };
 
   const handleTechToggle = (tech: string) => {
     setSelectedTech((prev) =>
@@ -97,16 +118,22 @@ const Onboarding = () => {
     );
   };
 
-  const canProceed = () => {
-    if (step === 1)
-      return profileData.name.length > 0 && profileData.college.length > 0;
-    if (step === 2) return true;
-    if (step === 3) return selectedMode !== null;
-    if (step === 4) return selectedTech.length > 0;
-    return false;
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setResumeFile(e.target.files[0]);
+      toast.success("Resume attached!");
+    }
   };
 
-  // --- FINAL SUBMIT ---
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setResumeFile(e.dataTransfer.files[0]);
+      toast.success("Resume attached!");
+    }
+  };
+
   const handleProfileSubmit = async () => {
     setLoading(true);
     try {
@@ -115,34 +142,36 @@ const Onboarding = () => {
         return;
       }
 
+      const formData = new FormData();
+      formData.append("name", profileData.name);
+      formData.append("college", profileData.college);
+      formData.append("bio", profileData.bio);
+      formData.append("role", profileData.role);
+      formData.append("github", noGithub ? "" : profileData.github);
+      formData.append("linkedin", profileData.linkedin);
+      formData.append("portfolio", profileData.portfolio);
+      formData.append("mode", selectedMode || "Chill");
+      formData.append("skills", JSON.stringify(selectedTech));
+
+      if (resumeFile) {
+        formData.append("resume", resumeFile);
+      }
+
       const response = await fetch(`${BACKEND_URL}/api/onboarding`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          name: profileData.name,
-          college: profileData.college,
-          bio: profileData.bio,
-          role: profileData.role,
-          mode: selectedMode || "Chill",
-          skills: selectedTech,
-          github: "",
-        }),
+        body: formData,
       });
 
       if (!response.ok) throw new Error("Failed to save profile");
 
       completeOnboarding();
-
-      // 🔥 Success Toast
       toast.success("Profile setup complete! Welcome aboard 🚀");
-
       navigate("/dashboard");
     } catch (error) {
       console.error("Failed to save profile:", error);
-      // 🔥 Error Toast
       toast.error("Failed to save profile. Please try again.");
     } finally {
       setLoading(false);
@@ -166,7 +195,6 @@ const Onboarding = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-
       <div className="container mx-auto px-4 pt-24 pb-12">
         {/* Progress bar */}
         <div className="max-w-xl mx-auto mb-12">
@@ -198,7 +226,6 @@ const Onboarding = () => {
         </div>
 
         <AnimatePresence mode="wait">
-          {/* === STEP 1: BASIC DETAILS === */}
           {step === 1 && (
             <motion.div
               key="step1"
@@ -215,7 +242,6 @@ const Onboarding = () => {
                   Build your hacker identity.
                 </p>
               </div>
-
               <div className="bg-card border border-border rounded-2xl p-6 shadow-lg space-y-4">
                 <div className="space-y-2">
                   <Label>Full Name</Label>
@@ -231,7 +257,6 @@ const Onboarding = () => {
                     />
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <Label>College / University</Label>
                   <div className="relative">
@@ -249,7 +274,6 @@ const Onboarding = () => {
                     />
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <Label>Primary Role</Label>
                   <Select
@@ -271,7 +295,6 @@ const Onboarding = () => {
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-2">
                   <Label>Short Bio</Label>
                   <Textarea
@@ -286,7 +309,6 @@ const Onboarding = () => {
             </motion.div>
           )}
 
-          {/* === STEP 2: RESUME UPLOAD (Optional) === */}
           {step === 2 && (
             <motion.div
               key="step2"
@@ -297,49 +319,158 @@ const Onboarding = () => {
             >
               <div className="text-center mb-8">
                 <h1 className="text-3xl font-bold text-foreground mb-2">
-                  Upload Your Resume
+                  Professional Profile
                 </h1>
                 <p className="text-muted-foreground">
-                  Optional: Let AI extract your skills automatically.
+                  Showcase your work and resume.
                 </p>
               </div>
-
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onDragEnter={() => setIsDragging(true)}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={() => setIsDragging(false)}
-                className={cn(
-                  "border-2 border-dashed rounded-2xl p-16 text-center cursor-pointer transition-all",
-                  isDragging
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-muted-foreground"
-                )}
-              >
-                <div className="w-16 h-16 rounded-2xl bg-secondary mx-auto mb-6 flex items-center justify-center">
-                  <Upload className="w-8 h-8 text-muted-foreground" />
+              <div className="bg-card border border-border rounded-2xl p-6 shadow-lg space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label>
+                        GitHub Profile
+                        <span className="text-red-500">*</span>
+                      </Label>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="no-github"
+                          checked={noGithub}
+                          onCheckedChange={(c) => {
+                            setNoGithub(c as boolean);
+                            if (c)
+                              setProfileData({ ...profileData, github: "" });
+                          }}
+                        />
+                        <label
+                          htmlFor="no-github"
+                          className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-muted-foreground"
+                        >
+                          I don't have GitHub
+                        </label>
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <Github className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="https://github.com/username"
+                        className="pl-9"
+                        value={profileData.github}
+                        disabled={noGithub}
+                        onChange={(e) =>
+                          setProfileData({
+                            ...profileData,
+                            github: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>LinkedIn (Optional)</Label>
+                    <div className="relative">
+                      <Linkedin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="https://linkedin.com/in/username"
+                        className="pl-9"
+                        value={profileData.linkedin}
+                        onChange={(e) =>
+                          setProfileData({
+                            ...profileData,
+                            linkedin: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Portfolio / Website (Optional)</Label>
+                    <div className="relative">
+                      <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="https://myportfolio.com"
+                        className="pl-9"
+                        value={profileData.portfolio}
+                        onChange={(e) =>
+                          setProfileData({
+                            ...profileData,
+                            portfolio: e.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
                 </div>
-                <h3 className="text-lg font-semibold text-foreground mb-2">
-                  Drag & drop your resume
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  or click to browse (PDF, DOCX)
-                </p>
-                <button className="text-sm text-primary hover:underline">
-                  Browse files
-                </button>
-              </motion.div>
-
-              <div className="text-center mt-6">
-                <Button variant="ghost" onClick={() => setStep(3)}>
-                  Skip for now <ArrowRight className="w-4 h-4 ml-2" />
-                </Button>
+                <div className="space-y-3 pt-4 border-t border-border">
+                  <Label>Resume / CV</Label>
+                  {!resumeFile ? (
+                    <motion.div
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      onDragEnter={() => setIsDragging(true)}
+                      onDragLeave={() => setIsDragging(false)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={handleDrop}
+                      onClick={() => fileInputRef.current?.click()}
+                      className={cn(
+                        "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all",
+                        isDragging
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50 hover:bg-secondary/50"
+                      )}
+                    >
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept=".pdf,.doc,.docx"
+                        onChange={handleFileSelect}
+                      />
+                      <div className="w-12 h-12 rounded-full bg-secondary mx-auto mb-4 flex items-center justify-center">
+                        <Upload className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                      <h3 className="text-sm font-semibold text-foreground">
+                        Click to upload or drag & drop
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        PDF or DOCX (Max 5MB)
+                      </p>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center justify-between p-4 border border-primary/20 bg-primary/5 rounded-xl"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                          <FileText className="w-5 h-5" />
+                        </div>
+                        <div className="text-sm">
+                          <p className="font-medium text-foreground truncate max-w-[200px]">
+                            {resumeFile.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {(resumeFile.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => setResumeFile(null)}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </motion.div>
+                  )}
+                </div>
               </div>
             </motion.div>
           )}
 
-          {/* === STEP 3: CHOOSE MODE === */}
           {step === 3 && (
             <motion.div
               key="step3"
@@ -356,7 +487,6 @@ const Onboarding = () => {
                   What's your hackathon energy?
                 </p>
               </div>
-
               <div className="grid md:grid-cols-3 gap-6">
                 {modes.map((mode) => (
                   <ModeCard
@@ -373,7 +503,6 @@ const Onboarding = () => {
             </motion.div>
           )}
 
-          {/* === STEP 4: TECH STACK === */}
           {step === 4 && (
             <motion.div
               key="step4"
@@ -390,7 +519,6 @@ const Onboarding = () => {
                   Select your skills and interests
                 </p>
               </div>
-
               <div className="flex flex-wrap justify-center gap-3">
                 {techOptions.map((tech) => (
                   <TechTag
@@ -401,7 +529,6 @@ const Onboarding = () => {
                   />
                 ))}
               </div>
-
               {selectedTech.length > 0 && (
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -438,9 +565,9 @@ const Onboarding = () => {
             onClick={handleNext}
             disabled={!canProceed() || loading}
             className={cn(
-              "flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all",
+              "flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all shadow-lg",
               canProceed()
-                ? "gradient-primary text-primary-foreground glow-primary"
+                ? "bg-primary text-primary-foreground hover:bg-primary/90"
                 : "bg-muted text-muted-foreground cursor-not-allowed"
             )}
           >

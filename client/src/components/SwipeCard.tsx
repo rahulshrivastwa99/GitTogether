@@ -5,7 +5,14 @@ import {
   PanInfo,
   animate,
 } from "framer-motion";
-import { Github, Linkedin, Code2, GraduationCap, Info } from "lucide-react";
+import {
+  Github,
+  Linkedin,
+  Code2,
+  GraduationCap,
+  Info,
+  Globe,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -18,13 +25,11 @@ import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { UserProfile } from "@/pages/Dashboard";
 
-// Removed RiskBadge import if not used, or keep it if needed
-
 interface SwipeCardProps {
   user: UserProfile;
   onSwipe: (direction: "left" | "right") => void;
   isTop: boolean;
-  exitDirection: "left" | "right"; // Kept for type safety, though we handle movement manually now
+  exitDirection: "left" | "right";
 }
 
 export const SwipeCard = ({ user, onSwipe, isTop }: SwipeCardProps) => {
@@ -37,9 +42,6 @@ export const SwipeCard = ({ user, onSwipe, isTop }: SwipeCardProps) => {
   const passOpacity = useTransform(x, [-100, -20], [1, 0]);
   const likeOpacity = useTransform(x, [20, 100], [0, 1]);
 
-  // --- FIX 1: REMOVED 'x' FROM VARIANTS ---
-  // We only use variants for opacity and scale now.
-  // The 'x' movement is handled by the motion value directly.
   const variants = {
     initial: { scale: 0.95, y: 0, opacity: 0 },
     animate: { scale: 1, y: 0, opacity: 1 },
@@ -50,23 +52,30 @@ export const SwipeCard = ({ user, onSwipe, isTop }: SwipeCardProps) => {
     },
   };
 
-  // --- FIX 2: HANDLE ANIMATION IN DRAG END ---
+  // --- FUNCTIONALITY: LINK HANDLER ---
+  const openLink = (e: React.MouseEvent, url?: string) => {
+    // CRITICAL FIX: Stops the drag gesture and prevents default button behavior
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!url) return;
+
+    // Ensure the URL is absolute so it doesn't try to open as a local route
+    const link = url.startsWith("http") ? url : `https://${url}`;
+    window.open(link, "_blank", "noopener,noreferrer");
+  };
+
   const handleDragEnd = (_: any, info: PanInfo) => {
     const threshold = 100;
-    const swipeVelocity = 500; // How far to throw the card
+    const swipeVelocity = 500;
 
     if (info.offset.x > threshold) {
-      // SWIPE RIGHT
-      // 1. Manually animate 'x' to fly off screen
       animate(x, swipeVelocity, { duration: 0.3 });
-      // 2. Trigger the state change
       onSwipe("right");
     } else if (info.offset.x < -threshold) {
-      // SWIPE LEFT
       animate(x, -swipeVelocity, { duration: 0.3 });
       onSwipe("left");
     } else {
-      // RESET
       animate(x, 0, { duration: 0.3 });
     }
   };
@@ -74,7 +83,7 @@ export const SwipeCard = ({ user, onSwipe, isTop }: SwipeCardProps) => {
   return (
     <motion.div
       style={{
-        x, // Binds the motion value to the element
+        x,
         rotate: isTop ? rotate : 0,
         opacity: isTop ? opacity : 1,
         zIndex: isTop ? 50 : 10,
@@ -87,8 +96,10 @@ export const SwipeCard = ({ user, onSwipe, isTop }: SwipeCardProps) => {
         isTop ? "cursor-grab active:cursor-grabbing" : "pointer-events-none"
       }`}
       drag={isTop ? "x" : false}
-      dragConstraints={{ left: 0, right: 0 }} // Optional: adds resistance
-      dragElastic={0.6} // Adds a nice elastic feel
+      // CRITICAL FIX: Ensures only the top card captures the drag listener
+      dragListener={isTop}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.6}
       onDragEnd={handleDragEnd}
       whileTap={{ scale: 0.98 }}
     >
@@ -120,16 +131,22 @@ export const SwipeCard = ({ user, onSwipe, isTop }: SwipeCardProps) => {
         />
         <div className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-blue-900/20 blur-[80px]" />
 
-        {/* Content */}
         <div className="relative h-full flex flex-col p-5 z-10">
           {/* Header */}
           <div className="flex justify-between items-start w-full mb-2">
-            <Badge
-              variant="outline"
-              className="border-white/10 bg-black/30 backdrop-blur-md text-white/80 text-[10px] uppercase tracking-wider"
-            >
-              {user.role}
-            </Badge>
+            <div className="flex flex-col gap-1">
+              <Badge
+                variant="outline"
+                className="border-white/10 bg-black/30 backdrop-blur-md text-white/80 text-[10px] uppercase tracking-wider w-fit"
+              >
+                {user.role}
+              </Badge>
+              {user.mode && (
+                <Badge className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30 text-[9px] w-fit">
+                  {user.mode}
+                </Badge>
+              )}
+            </div>
             {user.stats && (
               <div className="flex items-center gap-2 bg-black/30 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">
                 <div
@@ -152,7 +169,7 @@ export const SwipeCard = ({ user, onSwipe, isTop }: SwipeCardProps) => {
               <div
                 className="absolute -inset-1 rounded-full opacity-60 blur-md group-hover:opacity-100 transition duration-700"
                 style={{ background: user.avatarGradient }}
-              ></div>
+              />
 
               <Dialog>
                 <DialogTrigger asChild>
@@ -222,14 +239,50 @@ export const SwipeCard = ({ user, onSwipe, isTop }: SwipeCardProps) => {
 
             <div className="bg-white/5 rounded-xl p-3 border border-white/5 backdrop-blur-sm">
               <p className="text-xs text-zinc-300 text-center italic line-clamp-2">
-                "{user.bio}"
+                "{user.bio || "No bio provided"}"
               </p>
             </div>
 
-            <div className="flex justify-center gap-6 pt-2 pb-1">
-              <Github className="w-5 h-5 text-zinc-500 hover:text-white hover:scale-110 transition-all cursor-pointer" />
-              <Linkedin className="w-5 h-5 text-zinc-500 hover:text-blue-400 hover:scale-110 transition-all cursor-pointer" />
-              <Code2 className="w-5 h-5 text-zinc-500 hover:text-emerald-400 hover:scale-110 transition-all cursor-pointer" />
+            {/* CRITICAL FIX: Explicit button triggers for social links */}
+            <div className="flex justify-center gap-6 pt-2 pb-1 relative z-[100]">
+              {user.github && (
+                <button
+                  type="button"
+                  onClick={(e) => openLink(e, user.github)}
+                  className="hover:scale-110 transition-transform cursor-pointer outline-none"
+                >
+                  <Github className="w-5 h-5 text-zinc-500 hover:text-white" />
+                </button>
+              )}
+              {user.linkedin && (
+                <button
+                  type="button"
+                  onClick={(e) => openLink(e, user.linkedin)}
+                  className="hover:scale-110 transition-transform cursor-pointer outline-none"
+                >
+                  <Linkedin className="w-5 h-5 text-zinc-500 hover:text-blue-400" />
+                </button>
+              )}
+              {user.portfolio && (
+                <button
+                  type="button"
+                  onClick={(e) => openLink(e, user.portfolio)}
+                  className="hover:scale-110 transition-transform cursor-pointer outline-none"
+                >
+                  <Globe className="w-5 h-5 text-zinc-500 hover:text-emerald-400" />
+                </button>
+              )}
+              {user.resume && (
+                <button
+                  type="button"
+                  onClick={(e) =>
+                    openLink(e, `http://localhost:5000/${user.resume}`)
+                  }
+                  className="hover:scale-110 transition-transform cursor-pointer outline-none"
+                >
+                  <Code2 className="w-5 h-5 text-zinc-500 hover:text-orange-400" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -237,3 +290,5 @@ export const SwipeCard = ({ user, onSwipe, isTop }: SwipeCardProps) => {
     </motion.div>
   );
 };
+
+export default SwipeCard;

@@ -3,6 +3,10 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+// 1. Import multer at the top
+const multer = require("multer");
+const path = require("path");
+// const upload = multer({ dest: "uploads/" });
 const http = require("http"); // 🔥 IMPORT HTTP
 const { Server } = require("socket.io"); // 🔥 IMPORT SOCKET.IO
 const axios = require("axios");
@@ -192,6 +196,23 @@ const verifyToken = (req, res, next) => {
   }
 };
 
+// 1. Configure how files are stored
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/"); // Make sure this folder exists!
+  },
+  filename: (req, file, cb) => {
+    // This gives the file a unique name while keeping the extension (.pdf)
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(
+      null,
+      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
+    );
+  },
+});
+
+const upload = multer({ storage: storage });
+
 // -------------------- ROUTES --------------------
 
 // 1. SIGNUP
@@ -260,21 +281,66 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+app.use("/uploads", express.static("uploads"));
 // 3. ONBOARDING
-app.post("/api/onboarding", verifyToken, async (req, res) => {
-  try {
-    const { name, college, role, skills, bio, github, mode } = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      { name, college, role, skills, bio, github, mode, isOnboarded: true },
-      { new: true }
-    );
-    res.status(200).json({ message: "Profile updated", user });
-  } catch (error) {
-    res.status(500).json({ message: "Update failed" });
+// 2. Update the Onboarding Route
+// Add 'upload.single("resume")' as middleware to this specific route
+app.post(
+  "/api/onboarding",
+  verifyToken,
+  upload.single("resume"),
+  async (req, res) => {
+    try {
+      // With multer, text fields are in req.body, and the file is in req.file
+      const {
+        name,
+        college,
+        role,
+        skills,
+        bio,
+        github,
+        linkdein,
+        portfolio,
+        resume,
+        mode,
+      } = req.body;
+
+      // skills is sent as a JSON string from frontend, need to parse it back to an array
+      const parsedSkills =
+        typeof skills === "string" ? JSON.parse(skills) : skills;
+
+      const updateData = {
+        name,
+        college,
+        role,
+        skills: parsedSkills,
+        bio,
+        github,
+        linkdein,
+        portfolio,
+        resume,
+        mode,
+        isOnboarded: true,
+      };
+
+      // If a file was uploaded, you can save its path to the user profile
+      if (req.file) {
+        // Use forward slashes for the database to keep it URL-friendly
+        updateData.resume = req.file.path.replace(/\\/g, "/");
+        console.log("File saved at:", req.file.path);
+      }
+
+      const user = await User.findByIdAndUpdate(req.user.id, updateData, {
+        new: true,
+      });
+
+      res.status(200).json({ message: "Profile updated", user });
+    } catch (error) {
+      console.error("Onboarding Error:", error);
+      res.status(500).json({ message: "Update failed", error: error.message });
+    }
   }
-});
-console.log("✅ Onboarding route set up");
+);
 
 // 4. GET USERS FEED
 app.get("/api/users", verifyToken, async (req, res) => {
