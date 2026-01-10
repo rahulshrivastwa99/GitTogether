@@ -13,6 +13,7 @@ import {
   GraduationCap,
   Info,
   Globe,
+  MapPin,
 } from "lucide-react";
 import {
   Dialog,
@@ -53,6 +54,11 @@ export const SwipeCard = forwardRef<HTMLDivElement, SwipeCardProps>(({ user, onS
       transition: { duration: 0.2 },
     },
   };
+  
+  // Calculate distance if available (optional property)
+  const distanceInKm = (user as any).dist?.calculated 
+    ? ((user as any).dist.calculated / 1000).toFixed(1) 
+    : null;
 
   // --- FUNCTIONALITY: LINK HANDLER ---
   const openLink = (e: React.MouseEvent, url?: string) => {
@@ -165,6 +171,13 @@ export const SwipeCard = forwardRef<HTMLDivElement, SwipeCardProps>(({ user, onS
               </div>
             )}
           </div>
+          {/* Distance Badge - Only show if distance is available */}
+          {distanceInKm && (
+            <div className="absolute top-4 right-4 bg-primary/20 backdrop-blur-md px-3 py-1 rounded-full border border-primary/30 flex items-center gap-1 z-20">
+              <MapPin className="w-3 h-3 text-primary" />
+              <span className="text-[10px] font-bold text-primary">{distanceInKm} km away</span>
+            </div>
+          )}
 
           {/* Avatar Area */}
           <div className="flex flex-col items-center justify-center flex-1 -mt-4">

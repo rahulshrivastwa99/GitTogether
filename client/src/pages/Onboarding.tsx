@@ -14,6 +14,7 @@ import {
   Globe,
   FileText,
   X,
+  MapPin,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -28,6 +29,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import LocationSearch from "../components/LocationSearch";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -92,10 +94,12 @@ const Onboarding = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [noGithub, setNoGithub] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   const [profileData, setProfileData] = useState({
     name: "",
     college: "",
+    location: "", // Added location to state
     bio: "",
     role: "Frontend",
     github: "",
@@ -105,7 +109,11 @@ const Onboarding = () => {
 
   const canProceed = () => {
     if (step === 1)
-      return profileData.name.length > 0 && profileData.college.length > 0;
+      return (
+        profileData.name.length > 0 &&
+        profileData.college.length > 0 &&
+        profileData.location.length > 0
+      );
     if (step === 2) return profileData.github.length > 0 || noGithub;
     if (step === 3) return selectedMode !== null;
     if (step === 4) return selectedTech.length > 0;
@@ -125,12 +133,16 @@ const Onboarding = () => {
 
     try {
       toast.info("AI is analyzing your resume for skills...");
-      const response = await axios.post(`${BACKEND_URL}/api/onboarding`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await axios.post(
+        `${BACKEND_URL}/api/onboarding`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
       if (response.data.aiSuggestedSkills) {
         // Automatically select the skills Gemini found
@@ -174,6 +186,7 @@ const Onboarding = () => {
       const formData = new FormData();
       formData.append("name", profileData.name);
       formData.append("college", profileData.college);
+      formData.append("location", profileData.location); // Append location
       formData.append("bio", profileData.bio);
       formData.append("role", profileData.role);
       formData.append("github", noGithub ? "" : profileData.github);
@@ -181,6 +194,12 @@ const Onboarding = () => {
       formData.append("portfolio", profileData.portfolio);
       formData.append("mode", selectedMode || "Chill");
       formData.append("skills", JSON.stringify(selectedTech));
+
+      // Only send coordinates if they are valid numbers
+      if (coords && typeof coords.lat === 'number' && typeof coords.lng === 'number' && !isNaN(coords.lat) && !isNaN(coords.lng)) {
+        formData.append("lat", coords.lat.toString());
+        formData.append("lng", coords.lng.toString());
+      }
 
       if (resumeFile) {
         formData.append("resume", resumeFile);
@@ -198,7 +217,9 @@ const Onboarding = () => {
       navigate("/dashboard");
     } catch (error: any) {
       console.error("Failed to save profile:", error);
-      const msg = error.response?.data?.message || "Failed to save profile. Please check your data.";
+      const msg =
+        error.response?.data?.message ||
+        "Failed to save profile. Please check your data.";
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -376,6 +397,29 @@ const Onboarding = () => {
                           </div>
                         </div>
 
+                        {/* ✅ ADDED: Location Search Component */}
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 ml-1">
+                            Location
+                          </Label>
+                          <div className="relative group">
+                            <MapPin className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary z-10 transition-colors duration-300" />
+                            <div className="pl-0">
+                              <LocationSearch
+                                onSelect={(val) => {
+                                  setProfileData({
+                                    ...profileData,
+                                    location: val.name,
+                                  });
+                                  setCoords({ lat: val.lat, lng: val.lng });
+                                }}
+                                defaultValue={profileData.location}
+                                className="pl-10"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div className="space-y-1.5">
                             <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 ml-1">
@@ -402,6 +446,15 @@ const Onboarding = () => {
                                 </SelectItem>
                                 <SelectItem value="AI/ML">
                                   AI / ML Engineer
+                                </SelectItem>
+                                <SelectItem value="Data">
+                                  Data Engineer
+                                </SelectItem>
+                                <SelectItem value="Cybersecurity">
+                                  Cybersecurity Engineer
+                                </SelectItem>
+                                <SelectItem value="DevOps">
+                                  DevOps Engineer
                                 </SelectItem>
                               </SelectContent>
                             </Select>
@@ -560,7 +613,6 @@ const Onboarding = () => {
                             {...mode}
                             selected={selectedMode === mode.variant}
                             onClick={() => setSelectedMode(mode.variant)}
-                            className="h-[200px]"
                           />
                         ))}
                       </div>

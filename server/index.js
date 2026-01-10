@@ -72,6 +72,10 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   name: { type: String },
   college: { type: String },
+  location: {
+    type: { type: String, default: "Point" },
+    coordinates: { type: [Number], index: "2dsphere" }, 
+  },
   role: { type: String },
   skills: [String],
   bio: { type: String },
@@ -350,6 +354,9 @@ app.post("/api/onboarding", verifyToken, upload.single("resume"), async (req, re
   try {
     // 1. Extract all fields from req.body (Matches your Onboarding.tsx fields)
     const { name, college, role, skills, bio, github, linkedin, portfolio, mode } = req.body;
+
+    const { lat, lng } = req.body; // Sent from the frontend state
+
     
     let resumeData = "";
     let aiSuggestedSkills = [];
@@ -396,6 +403,22 @@ app.post("/api/onboarding", verifyToken, upload.single("resume"), async (req, re
       isOnboarded: true
     };
 
+    // Only set location coordinates if valid lat/lng are provided
+    if (lat !== undefined && lng !== undefined) {
+      const parsedLat = parseFloat(lat);
+      const parsedLng = parseFloat(lng);
+      
+      // Validate that both are valid numbers and within valid coordinate ranges
+      if (!isNaN(parsedLat) && !isNaN(parsedLng) && 
+          parsedLat >= -90 && parsedLat <= 90 && 
+          parsedLng >= -180 && parsedLng <= 180) {
+        updateData.location = {
+          type: "Point",
+          coordinates: [parsedLng, parsedLat] // MongoDB GeoJSON format: [longitude, latitude]
+        };
+      }
+    }
+
     // 5. Add resume data only if a file was actually uploaded
     if (resumeData) {
       updateData.resume = resumeData;
@@ -440,6 +463,56 @@ app.get("/api/test-ai", async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+
+app.get("/nearby", verifyToken, async (req, res) => {
+  try {
+    const currentUser = await User.findById(req.user.id);
+
+    if (!currentUser.location || !currentUser.location.coordinates) {
+      return res.status(400).json({ msg: "Please set your location first" });
+    }
+
+    const nearbyUsers = await User.find({
+      location: {
+        $near: {
+          $geometry: {
+            type: "Point",
+            coordinates: currentUser.location.coordinates, // [Lng, Lat]
+          },
+          $maxDistance: 10000, // Distance in meters (10,000m = 10km)
+        },
+      },
+      _id: { $ne: req.user.id }, // Don't show the user themselves
+    }).limit(20);
+    console.log("Nearby Users:", nearbyUsers);
+    res.json(nearbyUsers);
+  } catch (err) {
+    console.error(err);
+    console.error("Fetch error:", err);
+    res.status(500).send("Server Error");
+  }
+});
+
+// TEMP TEST ROUTE: Call this via browser to set your location instantly
+app.get("/api/debug/set-location", verifyToken, async (req, res) => {
+  try {
+    const testLat = 28.6139; // Delhi Lat
+    const testLng = 77.2090; // Delhi Lng
+    
+    await User.findByIdAndUpdate(req.user.id, {
+      location: {
+        type: "Point",
+        coordinates: [testLng, testLat]
+      }
+    });
+    // console.log("Working good the testing");
+    res.send("Location set to Delhi! Now try /api/users/nearby");
+    
+  } catch (err) {
+    res.status(500).send(err.message);
   }
 });
 
