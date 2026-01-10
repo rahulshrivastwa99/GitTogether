@@ -127,7 +127,7 @@ export default function AuthPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
+          {/* {!isLogin && (
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
               <div className="relative">
@@ -144,7 +144,7 @@ export default function AuthPage() {
                 />
               </div>
             </div>
-          )}
+          )} */}
 
           <div className="space-y-2">
             <Label htmlFor="identifier">Email Address</Label>
