@@ -114,7 +114,6 @@ npm run dev
 # Application runs on http://localhost:8080
 ```
 
-
 ## 📄 License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
