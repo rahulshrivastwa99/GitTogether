@@ -1,8 +1,9 @@
 # 🚀 GitTogether: From Solo Struggle to Dream Team
 
-![GitTogether Banner](https://img.shields.io/badge/Status-Prototype%20Ready-success)
+![Status](https://img.shields.io/badge/Status-Live%20Build-success)
 ![Tech Stack](https://img.shields.io/badge/MERN-Stack-blue)
 ![Google Tech](https://img.shields.io/badge/Powered%20By-Google%20Gemini-orange)
+![License](https://img.shields.io/badge/License-MIT-green)
 
 > **"Innovation dies in isolation. We ensure it thrives through collaboration."**
 
