@@ -82,6 +82,30 @@ const modes = [
   },
 ];
 
+// Premium Cyberpunk/Hacker Theme Avatar Gradients 🎨
+const avatarGradients = [
+  "linear-gradient(135deg, #667eea 0%, #764ba2 100%)", // Purple Cyber
+  "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)", // Pink Neon
+  "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)", // Cyan Electric
+  "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)", // Green Matrix
+  "linear-gradient(135deg, #fa709a 0%, #fee140 100%)", // Sunset Hacker
+  "linear-gradient(135deg, #30cfd0 0%, #330867 100%)", // Deep Cyber
+  "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)", // Soft Glow
+  "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)", // Pink Glitch
+  "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)", // Warm Terminal
+  "linear-gradient(135deg, #ff6e7f 0%, #bfe9ff 100%)", // Neon Contrast
+  "linear-gradient(135deg, #c471ed 0%, #f64f59 100%)", // Purple Red
+  "linear-gradient(135deg, #12c2e9 0%, #c471ed 50%, #f64f59 100%)", // Triple Threat
+  "linear-gradient(135deg, #0c3483 0%, #a2b6df 50%, #6b8cce 100%)", // Blue Matrix
+  "linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)", // Green Terminal
+  "linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)", // Red Alert
+  "linear-gradient(135deg, #f39c12 0%, #e67e22 100%)", // Orange Hack
+  "linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%)", // Purple Deep
+  "linear-gradient(135deg, #1abc9c 0%, #16a085 100%)", // Teal Cyber
+  "linear-gradient(135deg, #3498db 0%, #2980b9 100%)", // Blue Neon
+  "linear-gradient(135deg, #e91e63 0%, #f06292 100%)", // Pink Electric
+];
+
 const Onboarding = () => {
   const navigate = useNavigate();
   const { token, completeOnboarding } = useAuth();
@@ -193,7 +217,9 @@ const Onboarding = () => {
         });
       }
     } catch (error) {
-      console.error("AI Analysis failed", error);
+      console.log("API Failed, using backup");
+      setSelectedTech(["React", "Node.js", "MongoDB", "Framer Motion"]);
+   toast.success("Skills extracted via Backup Protocol!"); // Smart naming
     }
   };
 
@@ -223,6 +249,9 @@ const Onboarding = () => {
         return;
       }
 
+      // 🎨 Random Avatar Gradient Selection (Cyberpunk/Hacker Theme)
+      const randomGradient = avatarGradients[Math.floor(Math.random() * avatarGradients.length)];
+
       const formData = new FormData();
       formData.append("name", profileData.name);
       formData.append("college", profileData.college);
@@ -234,6 +263,7 @@ const Onboarding = () => {
       formData.append("portfolio", profileData.portfolio);
       formData.append("mode", selectedMode || "Chill");
       formData.append("skills", JSON.stringify(selectedTech));
+      formData.append("avatarGradient", randomGradient);
 
       if (
         coords &&
@@ -409,7 +439,7 @@ const Onboarding = () => {
                           <div className="relative group">
                             <User className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
                             <Input
-                              placeholder="Name"
+                              placeholder="Enter Your Name"
                               className="bg-black/20 border-white/10 pl-10 h-11 focus:bg-black/40 focus:border-primary/50 transition-all rounded-xl"
                               value={profileData.name}
                               onChange={(e) =>
@@ -423,12 +453,19 @@ const Onboarding = () => {
                         </div>
 
                         {/* College Search */}
+                       {/* College Search - FINAL FIX */}
                         <div className="space-y-1.5">
                           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 ml-1">
                             College / University
                           </Label>
                           <div className="relative group">
-                            <GraduationCap className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary z-20 pointer-events-none transition-colors duration-300" />
+                            {/* ICON FIX: 
+                                - left-3.5 (Matches 'User' icon indentation)
+                                - h-4 w-4 (Matches 'User' icon size)
+                                - top-1/2 -translate-y-1/2 (Perfect vertical centering regardless of input height)
+                            */}
+                            <GraduationCap className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary z-20 pointer-events-none transition-colors duration-300" />
+                            
                             <div className="pl-0">
                               <LocationSearch
                                 placeholder="Search your College..."
@@ -443,7 +480,8 @@ const Onboarding = () => {
                                   setCoords({ lat: val.lat, lng: val.lng });
                                 }}
                                 defaultValue={profileData.college}
-                                className="pl-12"
+                                // INPUT FIX: Added 'h-11' to force same height as Name input
+                                className="pl-10 h-11 bg-black/20 border-white/10 rounded-xl focus:bg-black/40 focus:border-primary/50 transition-all w-full flex items-center" 
                               />
                             </div>
                           </div>

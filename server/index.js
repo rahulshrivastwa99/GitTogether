@@ -353,7 +353,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 app.post("/api/onboarding", verifyToken, upload.single("resume"), async (req, res) => {
   try {
     // 1. Extract all fields from req.body (Matches your Onboarding.tsx fields)
-    const { name, college, role, skills, bio, github, linkedin, portfolio, mode } = req.body;
+    const { name, college, role, skills, bio, github, linkedin, portfolio, mode, avatarGradient } = req.body;
 
     const { lat, lng } = req.body; // Sent from the frontend state
 
@@ -402,6 +402,11 @@ app.post("/api/onboarding", verifyToken, upload.single("resume"), async (req, re
       skills: parsedSkills, 
       isOnboarded: true
     };
+
+    // 🎨 Add avatarGradient if provided (premium cyberpunk/hacker theme)
+    if (avatarGradient) {
+      updateData.avatarGradient = avatarGradient;
+    }
 
     // Only set location coordinates if valid lat/lng are provided
     if (lat !== undefined && lng !== undefined) {

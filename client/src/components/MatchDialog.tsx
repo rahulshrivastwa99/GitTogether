@@ -3,8 +3,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, X, Sparkles } from "lucide-react";
 import { UserProfile } from "@/pages/Dashboard";
-// import Confetti from "react-confetti"; // Optional: npm install react-confetti
-// import { useWindowSize } from "react-use"; // Optional: npm install react-use
+import Confetti from "react-confetti";
+import { useWindowSize } from "react-use";
+import { useEffect, useState } from "react";
 
 interface MatchDialogProps {
   isOpen: boolean;
@@ -21,8 +22,77 @@ export function MatchDialog({
   currentUserImage,
   onStartChat, // 🔥 ADD THIS
 }: MatchDialogProps) {
-  // If you didn't install react-use, just hardcode width/height or remove Confetti
-  // const { width, height } = useWindowSize();
+  const { width, height } = useWindowSize();
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  // 🎵 Celebration Sound Effect (Premium Match Sound)
+  const playCelebrationSound = () => {
+    try {
+      // Check if AudioContext is available
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      const audioContext = new AudioContextClass();
+      
+      // Resume audio context if suspended (required by some browsers)
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().catch(() => {});
+      }
+      
+      // Create a pleasant celebration sound (ascending major chord)
+      const frequencies = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6 (C major chord)
+      
+      frequencies.forEach((freq, index) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = freq;
+        oscillator.type = 'sine'; // Smooth, pleasant tone
+        
+        // Create a bell-like envelope with smooth fade
+        const now = audioContext.currentTime;
+        const startTime = now + index * 0.08; // Staggered start for chord effect
+        const duration = 0.8;
+        
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(0.25, startTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+        
+        oscillator.start(startTime);
+        oscillator.stop(startTime + duration);
+      });
+      
+      // Clean up audio context after sound finishes
+      setTimeout(() => {
+        if (audioContext.state !== 'closed') {
+          audioContext.close().catch(() => {});
+        }
+      }, 2000);
+    } catch (error) {
+      // Silently fail if audio is not available (some browsers require user interaction)
+      // This is expected behavior in some browsers
+    }
+  };
+
+  // Trigger confetti and sound when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setShowConfetti(true);
+      // Play celebration sound
+      playCelebrationSound();
+      
+      // Stop confetti after 5 seconds for better performance
+      const timer = setTimeout(() => {
+        setShowConfetti(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowConfetti(false);
+    }
+  }, [isOpen]);
 
   if (!matchedUser) return null;
 
@@ -39,8 +109,19 @@ export function MatchDialog({
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
           />
 
-          {/* Confetti (Optional - Remove if you don't want to install packages) */}
-          {/* <Confetti width={width} height={height} recycle={false} numberOfPieces={200} /> */}
+          {/* Confetti Celebration Effect 🎉 */}
+          {showConfetti && (
+            <Confetti
+              width={width}
+              height={height}
+              recycle={false}
+              numberOfPieces={300}
+              gravity={0.3}
+              initialVelocityY={20}
+              colors={['#ec4899', '#a855f7', '#06b6d4', '#f59e0b', '#10b981', '#3b82f6']}
+              style={{ position: 'fixed', top: 0, left: 0, pointerEvents: 'none' }}
+            />
+          )}
 
           {/* Modal Card */}
           <motion.div
