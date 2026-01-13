@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
@@ -15,6 +15,16 @@ import {
   FileText,
   X,
   MapPin,
+  Terminal,
+  Plus,
+  Cpu,
+  Code,
+  Server,
+  Layers,
+  Brain,
+  Database,
+  Shield,
+  Smartphone,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -43,22 +53,12 @@ import {
 // --- CONFIGURATION ---
 const BACKEND_URL = API_BASE_URL;
 
-const techOptions = [
-  "React",
-  "Python",
-  "TypeScript",
-  "Node.js",
-  "Flutter",
-  "Swift",
-  "Rust",
-  "Go",
-  "Java",
-  "C++",
-  "Machine Learning",
-  "Web3",
-  "DevOps",
-  "UI/UX",
-  "Mobile",
+// Initial suggestions (User can add more manually)
+const suggestedTech = [
+  "React", "Python", "TypeScript", "Node.js", "Flutter",
+  "Swift", "Rust", "Go", "Java", "C++", "Machine Learning",
+  "Web3", "DevOps", "UI/UX", "Mobile", "Next.js", "Docker",
+  "Kubernetes", "AWS", "Firebase"
 ];
 
 const modes = [
@@ -89,8 +89,15 @@ const Onboarding = () => {
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  
+  // New State for AI Analysis Animation
+  const [analyzing, setAnalyzing] = useState(false);
+  const [terminalLogs, setTerminalLogs] = useState<string[]>([]);
+  
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
   const [selectedTech, setSelectedTech] = useState<string[]>([]);
+  const [manualTechInput, setManualTechInput] = useState(""); 
+  
   const [isDragging, setIsDragging] = useState(false);
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [noGithub, setNoGithub] = useState(false);
@@ -99,13 +106,36 @@ const Onboarding = () => {
   const [profileData, setProfileData] = useState({
     name: "",
     college: "",
-    location: "", // Added location to state
+    location: "",
     bio: "",
     role: "Frontend",
     github: "",
     linkedin: "",
     portfolio: "",
   });
+
+  // --- LOGIC: Simulated Hacker Terminal ---
+  const runHackerSimulation = () => {
+    const logs = [
+      "Initializing resume parser...",
+      "Extracting text layers...",
+      "Identifying keywords...",
+      "Matching tech stack...",
+      "Optimizing profile...",
+      "Done.",
+    ];
+    setTerminalLogs([]);
+    logs.forEach((log, index) => {
+      setTimeout(() => {
+        setTerminalLogs((prev) => [...prev, log]);
+      }, index * 800); 
+    });
+
+    setTimeout(() => {
+      setAnalyzing(false);
+      toast.success("Skills extracted successfully!");
+    }, logs.length * 800 + 500);
+  };
 
   const canProceed = () => {
     if (step === 1)
@@ -126,13 +156,25 @@ const Onboarding = () => {
     );
   };
 
-  // ✅ ADDED: AI Resume Analysis logic
+  const handleManualTechAdd = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && manualTechInput.trim()) {
+      e.preventDefault();
+      const newTech = manualTechInput.trim();
+      if (!selectedTech.includes(newTech)) {
+        setSelectedTech((prev) => [...prev, newTech]);
+      }
+      setManualTechInput("");
+    }
+  };
+
   const analyzeResume = async (file: File) => {
     const formData = new FormData();
     formData.append("resume", file);
 
+    setAnalyzing(true); 
+    runHackerSimulation(); 
+
     try {
-      toast.info("AI is analyzing your resume for skills...");
       const response = await axios.post(
         `${BACKEND_URL}/api/onboarding`,
         formData,
@@ -145,13 +187,13 @@ const Onboarding = () => {
       );
 
       if (response.data.aiSuggestedSkills) {
-        // Automatically select the skills Gemini found
-        setSelectedTech(response.data.aiSuggestedSkills);
-        toast.success("AI suggested skills loaded!");
+        setSelectedTech((prev) => {
+          const combined = new Set([...prev, ...response.data.aiSuggestedSkills]);
+          return Array.from(combined);
+        });
       }
     } catch (error) {
       console.error("AI Analysis failed", error);
-      // We don't toast error here because this is an automated background task
     }
   };
 
@@ -159,8 +201,7 @@ const Onboarding = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setResumeFile(file);
-      toast.success("Resume attached!");
-      analyzeResume(file); // ✅ Trigger AI analysis
+      analyzeResume(file);
     }
   };
 
@@ -170,8 +211,7 @@ const Onboarding = () => {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       setResumeFile(file);
-      toast.success("Resume attached!");
-      analyzeResume(file); // ✅ Trigger AI analysis
+      analyzeResume(file);
     }
   };
 
@@ -186,7 +226,7 @@ const Onboarding = () => {
       const formData = new FormData();
       formData.append("name", profileData.name);
       formData.append("college", profileData.college);
-      formData.append("location", profileData.location); // Append location
+      formData.append("location", profileData.location);
       formData.append("bio", profileData.bio);
       formData.append("role", profileData.role);
       formData.append("github", noGithub ? "" : profileData.github);
@@ -195,8 +235,13 @@ const Onboarding = () => {
       formData.append("mode", selectedMode || "Chill");
       formData.append("skills", JSON.stringify(selectedTech));
 
-      // Only send coordinates if they are valid numbers
-      if (coords && typeof coords.lat === 'number' && typeof coords.lng === 'number' && !isNaN(coords.lat) && !isNaN(coords.lng)) {
+      if (
+        coords &&
+        typeof coords.lat === "number" &&
+        typeof coords.lng === "number" &&
+        !isNaN(coords.lat) &&
+        !isNaN(coords.lng)
+      ) {
         formData.append("lat", coords.lat.toString());
         formData.append("lng", coords.lng.toString());
       }
@@ -377,50 +422,35 @@ const Onboarding = () => {
                           </div>
                         </div>
 
+                        {/* College Search */}
                         <div className="space-y-1.5">
                           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 ml-1">
-                            College
+                            College / University
                           </Label>
                           <div className="relative group">
-                            <GraduationCap className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors duration-300" />
-                            <Input
-                              placeholder="University"
-                              className="bg-black/20 border-white/10 pl-10 h-11 focus:bg-black/40 focus:border-primary/50 transition-all rounded-xl"
-                              value={profileData.college}
-                              onChange={(e) =>
-                                setProfileData({
-                                  ...profileData,
-                                  college: e.target.value,
-                                })
-                              }
-                            />
-                          </div>
-                        </div>
-
-                        {/* ✅ ADDED: Location Search Component */}
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 ml-1">
-                            Location
-                          </Label>
-                          <div className="relative group">
-                            <MapPin className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary z-10 transition-colors duration-300" />
+                            <GraduationCap className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary z-20 pointer-events-none transition-colors duration-300" />
                             <div className="pl-0">
                               <LocationSearch
+                                placeholder="Search your College..."
                                 onSelect={(val) => {
+                                  const fullName = val.name || "";
+                                  const shortName = fullName.split(",")[0];
                                   setProfileData({
                                     ...profileData,
-                                    location: val.name,
+                                    college: shortName,
+                                    location: shortName,
                                   });
                                   setCoords({ lat: val.lat, lng: val.lng });
                                 }}
-                                defaultValue={profileData.location}
-                                className="pl-10"
+                                defaultValue={profileData.college}
+                                className="pl-12"
                               />
                             </div>
                           </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                          {/* ✅ IMPROVED: Primary Role with Icons */}
                           <div className="space-y-1.5">
                             <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 ml-1">
                               Primary Role
@@ -431,49 +461,76 @@ const Onboarding = () => {
                                 setProfileData({ ...profileData, role: val })
                               }
                             >
-                              <SelectTrigger className="bg-black/20 border-white/10 h-11 rounded-xl">
+                              <SelectTrigger className="bg-black/20 border-white/10 h-11 rounded-xl focus:ring-primary/50 focus:border-primary/50 transition-all">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent className="bg-black/90 border-white/10 backdrop-blur-xl">
+                              <SelectContent className="bg-black/95 border-white/10 backdrop-blur-xl">
                                 <SelectItem value="Frontend">
-                                  Frontend Dev
+                                  <div className="flex items-center gap-2">
+                                    <Code className="w-4 h-4 text-blue-400" /> <span>Frontend Dev</span>
+                                  </div>
                                 </SelectItem>
                                 <SelectItem value="Backend">
-                                  Backend Dev
+                                  <div className="flex items-center gap-2">
+                                    <Server className="w-4 h-4 text-green-400" /> <span>Backend Dev</span>
+                                  </div>
                                 </SelectItem>
                                 <SelectItem value="FullStack">
-                                  Full Stack
+                                  <div className="flex items-center gap-2">
+                                    <Layers className="w-4 h-4 text-purple-400" /> <span>Full Stack</span>
+                                  </div>
                                 </SelectItem>
                                 <SelectItem value="AI/ML">
-                                  AI / ML Engineer
+                                  <div className="flex items-center gap-2">
+                                    <Brain className="w-4 h-4 text-pink-400" /> <span>AI / ML Engineer</span>
+                                  </div>
                                 </SelectItem>
                                 <SelectItem value="Data">
-                                  Data Engineer
+                                  <div className="flex items-center gap-2">
+                                    <Database className="w-4 h-4 text-yellow-400" /> <span>Data Engineer</span>
+                                  </div>
                                 </SelectItem>
                                 <SelectItem value="Cybersecurity">
-                                  Cybersecurity Engineer
+                                  <div className="flex items-center gap-2">
+                                    <Shield className="w-4 h-4 text-red-400" /> <span>Cybersecurity</span>
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="Mobile">
+                                  <div className="flex items-center gap-2">
+                                    <Smartphone className="w-4 h-4 text-orange-400" /> <span>Mobile Dev</span>
+                                  </div>
                                 </SelectItem>
                                 <SelectItem value="DevOps">
-                                  DevOps Engineer
+                                  <div className="flex items-center gap-2">
+                                    <Terminal className="w-4 h-4 text-gray-400" /> <span>DevOps Engineer</span>
+                                  </div>
                                 </SelectItem>
                               </SelectContent>
                             </Select>
                           </div>
+
+                          {/* ✅ IMPROVED: Short Bio with Character Count */}
                           <div className="space-y-1.5">
                             <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 ml-1">
                               Short Bio
                             </Label>
-                            <Textarea
-                              placeholder="Build scalable systems..."
-                              className="bg-black/20 border-white/10 h-11 min-h-[44px] rounded-xl transition-all resize-none pt-2.5"
-                              value={profileData.bio}
-                              onChange={(e) =>
-                                setProfileData({
-                                  ...profileData,
-                                  bio: e.target.value,
-                                })
-                              }
-                            />
+                            <div className="relative">
+                                <Textarea
+                                placeholder="Build scalable systems..."
+                                maxLength={160}
+                                className="bg-black/20 border-white/10 h-11 min-h-[44px] rounded-xl transition-all resize-none pt-2.5 pr-12 focus:bg-black/40 focus:border-primary/50"
+                                value={profileData.bio}
+                                onChange={(e) =>
+                                    setProfileData({
+                                    ...profileData,
+                                    bio: e.target.value,
+                                    })
+                                }
+                                />
+                                <span className="absolute bottom-2 right-3 text-[10px] text-muted-foreground/50">
+                                    {profileData.bio.length}/160
+                                </span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -498,6 +555,7 @@ const Onboarding = () => {
                       </div>
 
                       <div className="space-y-6">
+                        {/* Github */}
                         <div className="space-y-2">
                           <div className="flex justify-between items-center">
                             <Label className="text-xs uppercase tracking-widest text-muted-foreground ml-1">
@@ -510,37 +568,65 @@ const Onboarding = () => {
                                 onCheckedChange={(c) => {
                                   setNoGithub(!!c);
                                   if (c)
-                                    setProfileData({
-                                      ...profileData,
-                                      github: "",
-                                    });
+                                    setProfileData({ ...profileData, github: "" });
                                 }}
                               />
-                              <Label
-                                htmlFor="no-github"
-                                className="text-xs text-muted-foreground/70 cursor-pointer"
-                              >
+                              <Label htmlFor="no-github" className="text-xs text-muted-foreground/70 cursor-pointer">
                                 I don't have one
                               </Label>
                             </div>
                           </div>
-                          <div className="relative">
-                            <Github className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <div className="relative group">
+                            <Github className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-white transition-colors" />
                             <Input
                               disabled={noGithub}
                               placeholder="https://github.com/username"
-                              className="bg-black/20 border-white/10 pl-10 h-11 rounded-xl"
+                              className="bg-black/20 border-white/10 pl-10 h-11 rounded-xl focus:border-primary/50 focus:bg-black/40 transition-all"
                               value={profileData.github}
                               onChange={(e) =>
-                                setProfileData({
-                                  ...profileData,
-                                  github: e.target.value,
-                                })
+                                setProfileData({ ...profileData, github: e.target.value })
                               }
                             />
                           </div>
                         </div>
 
+                        {/* ✅ ADDED: LinkedIn & Portfolio Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 ml-1">
+                                    LinkedIn
+                                </Label>
+                                <div className="relative group">
+                                    <Linkedin className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-blue-500 transition-colors" />
+                                    <Input
+                                        placeholder="linkedin.com/in/..."
+                                        className="bg-black/20 border-white/10 pl-10 h-11 rounded-xl focus:border-blue-500/50 focus:bg-black/40 transition-all"
+                                        value={profileData.linkedin}
+                                        onChange={(e) =>
+                                            setProfileData({ ...profileData, linkedin: e.target.value })
+                                        }
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 ml-1">
+                                    Portfolio / Website
+                                </Label>
+                                <div className="relative group">
+                                    <Globe className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground group-focus-within:text-green-500 transition-colors" />
+                                    <Input
+                                        placeholder="mywebsite.com"
+                                        className="bg-black/20 border-white/10 pl-10 h-11 rounded-xl focus:border-green-500/50 focus:bg-black/40 transition-all"
+                                        value={profileData.portfolio}
+                                        onChange={(e) =>
+                                            setProfileData({ ...profileData, portfolio: e.target.value })
+                                        }
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Resume */}
                         <div className="space-y-3 pt-4 border-t border-white/5">
                           <Label className="text-xs uppercase tracking-widest text-muted-foreground ml-1">
                             Resume / CV
@@ -613,6 +699,7 @@ const Onboarding = () => {
                             {...mode}
                             selected={selectedMode === mode.variant}
                             onClick={() => setSelectedMode(mode.variant)}
+                            className="h-[200px]"
                           />
                         ))}
                       </div>
@@ -627,21 +714,96 @@ const Onboarding = () => {
                       exit={{ opacity: 0, x: -20 }}
                       className="w-full"
                     >
-                      <div className="text-center mb-8">
-                        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-white/60">
-                          Your Tech Stack
-                        </h1>
-                      </div>
-                      <div className="flex flex-wrap justify-center gap-3">
-                        {techOptions.map((tech) => (
-                          <TechTag
-                            key={tech}
-                            label={tech}
-                            selected={selectedTech.includes(tech)}
-                            onClick={() => handleTechToggle(tech)}
-                          />
-                        ))}
-                      </div>
+                      {/* ✅ ATTRACTIVE LOADING STATE: HACKER TERMINAL */}
+                      {analyzing ? (
+                        <div className="flex flex-col items-center justify-center min-h-[300px]">
+                          <div className="relative w-20 h-20 mb-6">
+                            <motion.div 
+                              className="absolute inset-0 border-4 border-primary/30 rounded-full"
+                              animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
+                              transition={{ duration: 2, repeat: Infinity }}
+                            />
+                             <motion.div 
+                              className="absolute inset-0 border-4 border-t-primary rounded-full"
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                            />
+                            <Cpu className="absolute inset-0 m-auto w-8 h-8 text-primary" />
+                          </div>
+                          
+                          <div className="w-full max-w-sm bg-black/50 border border-primary/20 rounded-lg p-4 font-mono text-sm shadow-2xl">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/10">
+                              <Terminal className="w-4 h-4 text-primary" />
+                              <span className="text-xs text-muted-foreground">AI_RESUME_PARSER.exe</span>
+                            </div>
+                            <div className="space-y-1 h-[120px] overflow-hidden flex flex-col justify-end">
+                              {terminalLogs.map((log, i) => (
+                                <motion.div 
+                                  key={i}
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  className="text-green-500/80"
+                                >
+                                  {`> ${log}`}
+                                </motion.div>
+                              ))}
+                              <motion.div 
+                                animate={{ opacity: [0, 1, 0] }}
+                                transition={{ repeat: Infinity, duration: 0.8 }}
+                                className="w-2 h-4 bg-primary inline-block"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        // ✅ NORMAL TECH SELECTION VIEW (with manual input)
+                        <>
+                          <div className="text-center mb-6">
+                            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-white/60">
+                              Your Tech Stack
+                            </h1>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              AI detected these. Add more if we missed something.
+                            </p>
+                          </div>
+
+                          {/* Manual Input Bar */}
+                          <div className="relative max-w-sm mx-auto mb-6 group">
+                            <Plus className="absolute left-3 top-3 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                            <Input 
+                              placeholder="Type a skill & press Enter (e.g. Docker)" 
+                              className="pl-10 bg-black/30 border-white/10 focus:border-primary/50"
+                              value={manualTechInput}
+                              onChange={(e) => setManualTechInput(e.target.value)}
+                              onKeyDown={handleManualTechAdd}
+                            />
+                          </div>
+
+                          <div className="flex flex-wrap justify-center gap-2 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary/20">
+                             {/* Show Selected first (AI + User) */}
+                             {selectedTech.map((tech) => (
+                              <TechTag
+                                key={tech}
+                                label={tech}
+                                selected={true}
+                                onClick={() => handleTechToggle(tech)}
+                              />
+                            ))}
+                            
+                            {/* Show Suggestions (excluding already selected) */}
+                            {suggestedTech
+                              .filter(t => !selectedTech.includes(t))
+                              .map((tech) => (
+                              <TechTag
+                                key={tech}
+                                label={tech}
+                                selected={false}
+                                onClick={() => handleTechToggle(tech)}
+                              />
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -663,7 +825,7 @@ const Onboarding = () => {
 
                   <Button
                     onClick={handleNext}
-                    disabled={!canProceed() || loading}
+                    disabled={!canProceed() || loading || analyzing} // Disable while analyzing
                     className="relative h-11 px-8 rounded-full bg-gradient-to-r from-primary to-purple-600 hover:opacity-90 transition-all shadow-lg shadow-primary/20"
                   >
                     <span className="relative flex items-center gap-2 font-bold">

@@ -57,9 +57,9 @@ export default function LocationSearch({ onSelect, defaultValue = "", className 
   return (
     <div className="relative w-full">
       <div className="relative">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        {/* <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /> */}
         <Input
-          placeholder="Search your location..."
+          placeholder="Search your College/University..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className={`pl-9 bg-white/5 border-white/10 text-white ${className}`}
