@@ -16,7 +16,7 @@
 
 ## 🧐 The Problem
 Thousands of motivated students skip hackathons simply because they lack a team.
-- **Isolation:** First-time participants are intimidated.
+- **Isolation:** First time participants are intimidated.
 - **Skill Mismatch:** Random teams often end up with 3 designers and 0 developers.
 - **Trust Issues:** Verbal agreements are broken, leading to dropouts.
 
