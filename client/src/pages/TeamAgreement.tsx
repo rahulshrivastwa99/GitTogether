@@ -16,7 +16,7 @@ import {
   LogOut,
   AlertCircle,
   Download,
-  FileText,
+  Github,
   Sparkles,
 } from "lucide-react";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
@@ -355,6 +355,34 @@ export default function TeamAgreement() {
   // Check if editing is disabled (user has signed OR contract is fully signed)
   const isEditingDisabled = hasCurrentUserSigned || isContractFullySigned;
 
+  // --- One-click GitHub repo ---
+  const [creatingRepo, setCreatingRepo] = useState(false);
+  const [createdRepoUrl, setCreatedRepoUrl] = useState<string | null>(null);
+
+  const handleCreateRepo = async () => {
+    if (!teamData?._id) return;
+    setCreatingRepo(true);
+    try {
+      const res = await axios.post(
+        `${API_BASE_URL}/api/team/${teamData._id}/github-repo`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const url = res.data?.repo?.url;
+      setCreatedRepoUrl(url || null);
+      if (url) {
+        toast.success("GitHub repo created! Opening…");
+        window.open(url, "_blank", "noopener,noreferrer");
+      } else {
+        toast.success("GitHub repo created!");
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to create GitHub repo");
+    } finally {
+      setCreatingRepo(false);
+    }
+  };
+
   // PDF Download Handler
   const handleDownloadPDF = () => {
     window.print();
@@ -646,6 +674,23 @@ export default function TeamAgreement() {
                     <Download className="w-4 h-4 mr-2" />
                     PDF
                   </Button>
+
+                  {/* One-Click Repo (only after contract is fully signed) */}
+                  {isContractFullySigned && (
+                    <Button
+                      onClick={handleCreateRepo}
+                      variant="default"
+                      disabled={creatingRepo}
+                      title="Create GitHub Repo"
+                    >
+                      {creatingRepo ? (
+                        <Loader2 className="animate-spin w-4 h-4 mr-2" />
+                      ) : (
+                        <Github className="w-4 h-4 mr-2" />
+                      )}
+                      One‑Click Repo
+                    </Button>
+                  )}
                 </div>
               </div>
 

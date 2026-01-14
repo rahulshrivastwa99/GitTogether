@@ -25,6 +25,24 @@ const Calendar = require("./models/calendar");
 const Agreement = require("./models/agreement");
 const { extractSkillsFromPDF } = require('./services/geminiService');
 
+// -------------------- GITHUB HELPERS --------------------
+function slugifyRepoName(input) {
+  return String(input || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
+function parseGitHubUsername(githubField) {
+  if (!githubField) return null;
+  const raw = String(githubField).trim();
+  // Accept "username" or "https://github.com/username" or "github.com/username"
+  const match = raw.match(/(?:github\.com\/)?([A-Za-z0-9-]{1,39})\/?$/i);
+  return match?.[1] || null;
+}
+
 // -------------------- MIDDLEWARE --------------------
 
 const allowedOrigins = [
@@ -829,6 +847,115 @@ app.get("/api/team", verifyToken, async (req, res) => {
   } catch (error) {
     console.error("Team fetch error:", error);
     res.status(500).json({ message: "Error fetching team" });
+  }
+});
+
+// ==================== GITHUB ROUTES ====================
+// Create a GitHub repo for a team (only after contract is fully signed)
+app.post("/api/team/:teamId/github-repo", verifyToken, async (req, res) => {
+  try {
+    const { teamId } = req.params;
+    const requesterId = req.user.id;
+
+    const team = await Team.findOne({ _id: teamId, members: requesterId })
+      .populate("members", "name email role github")
+      .lean();
+
+    if (!team) {
+      return res.status(404).json({ message: "Team not found or access denied" });
+    }
+
+    if (team?.agreement?.status !== "Signed") {
+      return res
+        .status(400)
+        .json({ message: "Repo can be created only after the contract is Signed." });
+    }
+
+    const githubToken = process.env.GITHUB_TOKEN;
+    const githubOwner = process.env.GITHUB_OWNER; // e.g. "my-org" or "my-username"
+    const githubOwnerType = (process.env.GITHUB_OWNER_TYPE || "org").toLowerCase(); // "org" | "user"
+
+    if (!githubToken || !githubOwner) {
+      return res.status(500).json({
+        message:
+          "Server GitHub integration is not configured. Set GITHUB_TOKEN and GITHUB_OWNER.",
+      });
+    }
+
+    const baseName = slugifyRepoName(`${team.teamName}-${team.hackathonName}`);
+    const repoName = baseName || slugifyRepoName(team.teamName) || `team-${teamId.slice(-6)}`;
+
+    // Create repo
+    const createRepoUrl =
+      githubOwnerType === "user"
+        ? "https://api.github.com/user/repos"
+        : `https://api.github.com/orgs/${githubOwner}/repos`;
+
+    const repoPayload = {
+      name: repoName,
+      private: false,
+      description: `GitTogether repo for team "${team.teamName}" (${team.hackathonName})`,
+      has_issues: true,
+      has_projects: true,
+      has_wiki: true,
+      auto_init: true,
+    };
+
+    const repoRes = await axios.post(createRepoUrl, repoPayload, {
+      headers: {
+        Authorization: `Bearer ${githubToken}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "GitTogether",
+      },
+    });
+
+    const repoHtmlUrl = repoRes.data?.html_url;
+
+    // Invite collaborators (best-effort)
+    const memberUsernames = (team.members || [])
+      .map((m) => parseGitHubUsername(m.github))
+      .filter(Boolean);
+
+    const uniqueUsernames = Array.from(new Set(memberUsernames));
+
+    const inviteResults = [];
+    for (const username of uniqueUsernames) {
+      try {
+        const inviteUrl = `https://api.github.com/repos/${githubOwner}/${repoName}/collaborators/${username}`;
+        await axios.put(
+          inviteUrl,
+          { permission: "push" },
+          {
+            headers: {
+              Authorization: `Bearer ${githubToken}`,
+              Accept: "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "GitTogether",
+            },
+          }
+        );
+        inviteResults.push({ username, invited: true });
+      } catch (e) {
+        inviteResults.push({ username, invited: false });
+      }
+    }
+
+    return res.json({
+      message: "Repo created successfully",
+      repo: { name: repoName, url: repoHtmlUrl, owner: githubOwner },
+      invites: inviteResults,
+    });
+  } catch (error) {
+    const status = error?.response?.status;
+    const ghMessage =
+      error?.response?.data?.message ||
+      error?.response?.data?.errors?.[0]?.message ||
+      null;
+    console.error("GitHub repo creation error:", status, ghMessage || error?.message);
+    return res.status(500).json({
+      message: ghMessage || "Failed to create GitHub repo",
+    });
   }
 });
 
