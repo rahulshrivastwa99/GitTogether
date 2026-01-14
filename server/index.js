@@ -167,6 +167,12 @@ io.on("connection", (socket) => {
     console.log(`👤 User joined room: ${userId}`);
   });
 
+  // User joins a team room
+  socket.on("join_team", (teamId) => {
+    socket.join(`team_${teamId}`);
+    console.log(`👥 User joined team room: team_${teamId}`);
+  });
+
   // Handle sending messages
   socket.on("send_message", async (data) => {
     const { senderId, receiverId, content } = data;
@@ -840,7 +846,29 @@ app.post("/api/team/create", verifyToken, async (req, res) => {
       return res.status(400).json({ message: "Missing required team data" });
     }
 
-    // Check for existing team
+    // Check if creator is already in a team
+    const existingTeamForCreator = await Team.findOne({
+      members: req.user.id,
+    });
+    if (existingTeamForCreator) {
+      return res
+        .status(400)
+        .json({ message: "You are already in a team. Leave your current team first." });
+    }
+
+    // Check if any selected member is already in a team
+    for (const memberId of memberIds) {
+      const existingTeamForMember = await Team.findOne({
+        members: memberId,
+      });
+      if (existingTeamForMember) {
+        return res
+          .status(400)
+          .json({ message: "One or more selected members are already in a team." });
+      }
+    }
+
+    // Check for existing team with same name
     const existingTeam = await Team.findOne({
       teamName: teamName.trim(),
       creator: req.user.id,
@@ -895,6 +923,23 @@ app.post("/api/team/create", verifyToken, async (req, res) => {
       members: populatedTeam.members.length,
     });
 
+    // Get creator's name
+    const creator = await User.findById(req.user.id);
+    const creatorName = creator?.name || "Unknown";
+
+    // 🔔 EMIT REAL-TIME NOTIFICATION TO ALL SELECTED MEMBERS
+    // Notify all members (except creator) that they've been added to a team
+    allMembers.forEach((memberId) => {
+      if (memberId.toString() !== req.user.id.toString()) {
+        io.to(memberId.toString()).emit("team_formed", {
+          teamId: populatedTeam._id,
+          teamName: populatedTeam.teamName,
+          hackathonName: populatedTeam.hackathonName,
+          creatorName: creatorName,
+        });
+      }
+    });
+
     res.status(201).json({
       message: "Team created successfully",
       team: populatedTeam,
@@ -945,6 +990,16 @@ app.put("/api/team/:teamId/contract", verifyToken, async (req, res) => {
         hours: "",
         responsibility: "",
       }));
+    }
+
+    // 🔔 EMIT REAL-TIME UPDATE TO TEAM ROOM
+    const populatedTeam = await Team.findById(teamId)
+      .populate("members", "name email role")
+      .populate("agreement.memberDetails.userId", "name")
+      .lean();
+    
+    if (populatedTeam) {
+      io.to(`team_${teamId}`).emit("contract_updated", populatedTeam);
     }
 
     res.json(team);
@@ -1003,6 +1058,27 @@ app.post("/api/team/:teamId/sign", verifyToken, async (req, res) => {
         })
       );
     }
+
+    // 🔔 EMIT REAL-TIME NOTIFICATION TO OTHER TEAM MEMBERS
+    // Notify all other members that someone signed
+    const signedUser = updatedTeam.members.find(
+      (m) => m._id.toString() === userId.toString()
+    );
+    
+    updatedTeam.members.forEach((member) => {
+      if (member._id.toString() !== userId.toString()) {
+        io.to(member._id.toString()).emit("member_signed", {
+          teamId: teamId,
+          signedUserId: userId,
+          signedUserName: signedUser?.name || "Unknown",
+          message: "Please Sign",
+          allSigned: updatedTeam.agreement.status === "Signed",
+        });
+      }
+    });
+
+    // Also emit to team room for contract updates
+    io.to(`team_${teamId}`).emit("contract_updated", updatedTeam);
 
     res.json({ message: "Signed successfully", team: updatedTeam });
   } catch (error) {
