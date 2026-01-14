@@ -1,14 +1,63 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 require("dotenv").config();
 
-// Initialize Gemini with the Flash model for speed
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// Initialize Gemini with the Flash model for speed (if key is present)
+let model = null;
+try {
+  if (process.env.GEMINI_API_KEY) {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-// 🔥 CONFIG: Force JSON output mode (No regex needed!)
-const model = genAI.getGenerativeModel({ 
-  model: "gemini-flash-latest",
-  generationConfig: { responseMimeType: "application/json" }
-});
+    // 🔥 CONFIG: Force JSON output mode (No regex needed!)
+    model = genAI.getGenerativeModel({
+      model: "gemini-flash-latest",
+      generationConfig: { responseMimeType: "application/json" },
+    });
+  } else {
+    console.warn(
+      "⚠️ GEMINI_API_KEY is missing. Idea Spark will use static fallback ideas."
+    );
+  }
+} catch (e) {
+  console.error("❌ Failed to initialise Gemini model. Falling back to static ideas.", e);
+  model = null;
+}
+
+// 🔁 SAFE SERVER-SIDE FALLBACK (mirrors the frontend MOCK_IDEAS shape)
+const FALLBACK_IDEAS = [
+  {
+    title: "EcoSmart Tracker",
+    tagline: "AI-driven carbon footprint analysis for retail.",
+    desc: "An AI-powered dashboard that tracks carbon footprint from grocery receipts automatically.",
+    long_desc:
+      "EcoSmart Tracker is a sustainability platform that empowers users to make greener purchasing decisions. By simply scanning a grocery receipt, the app uses OCR and extensive carbon footprint databases to calculate the environmental impact of each item.",
+    features: ["Receipt OCR", "Carbon Analytics", "Gamified Goals"],
+    stack: ["React", "Vision API", "Node.js"],
+    difficulty: "Intermediate",
+    matchScore: "98%",
+  },
+  {
+    title: "HealthChain Records",
+    tagline: "Decentralized patient data sovereignty.",
+    desc: "A decentralized platform for securely sharing patient medical history between hospitals.",
+    long_desc:
+      "HealthChain aims to solve the interoperability crisis in healthcare. It uses a private blockchain to store hashes of medical records, ensuring patient data ownership and privacy.",
+    features: ["Decentralized Identity", "IPFS Storage", "QR Access"],
+    stack: ["Solidity", "Next.js", "IPFS"],
+    difficulty: "Advanced",
+    matchScore: "92%",
+  },
+  {
+    title: "EduVoice Assistant",
+    tagline: "Voice-first study companion for active recall.",
+    desc: "A voice-activated study companion that quizzes students based on their notes.",
+    long_desc:
+      "EduVoice transforms static PDF notes into an interactive oral exam. Students upload their lecture notes, and the AI generates a conversational quiz.",
+    features: ["PDF Parsing", "Voice AI", "Spaced Repetition"],
+    stack: ["Python", "Whisper AI", "React"],
+    difficulty: "Beginner",
+    matchScore: "89%",
+  },
+];
 
 /**
  * Generates Hackathon Ideas based on the "Idea Forge" parameters
@@ -17,6 +66,12 @@ const model = genAI.getGenerativeModel({
  * @param {number} teamSize - Number of members (1-6)
  */
 const generateHackathonIdeas = async (skills, theme, teamSize) => {
+  // If the model is not available, immediately serve static ideas instead of 500
+  if (!model) {
+    console.log("⚙️ Gemini unavailable, serving static Idea Spark fallback payload.");
+    return FALLBACK_IDEAS;
+  }
+
   try {
     // Safety check: Ensure skills is an array, or fallback to string splitting
     const skillList = Array.isArray(skills) ? skills.join(", ") : skills;
@@ -27,9 +82,11 @@ const generateHackathonIdeas = async (skills, theme, teamSize) => {
     // We adjust the AI's "Persona" based on the team size.
     let complexityInstruction = "";
     if (size <= 2) {
-      complexityInstruction = "The team is small (1-2 people). Focus on HIGH-IMPACT, LOW-CODE, or clever API integrations. Avoid complex microservices.";
+      complexityInstruction =
+        "The team is small (1-2 people). Focus on HIGH-IMPACT, LOW-CODE, or clever API integrations. Avoid complex microservices.";
     } else {
-      complexityInstruction = "The team is large (4+ people). Focus on COMPREHENSIVE ecosystems, multi-platform solutions, or complex architectures that utilize everyone.";
+      complexityInstruction =
+        "The team is large (4+ people). Focus on COMPREHENSIVE ecosystems, multi-platform solutions, or complex architectures that utilize everyone.";
     }
 
     const prompt = `
@@ -60,16 +117,21 @@ const generateHackathonIdeas = async (skills, theme, teamSize) => {
     `;
 
     const result = await model.generateContent(prompt);
-    
+
     // With JSON mode, we just parse directly. No regex cleaning required.
     const ideas = JSON.parse(result.response.text());
 
-    return ideas;
+    // Ensure we always return an array
+    if (!Array.isArray(ideas)) {
+      console.warn("⚠️ Gemini returned non-array payload. Falling back to static ideas.");
+      return FALLBACK_IDEAS;
+    }
 
+    return ideas;
   } catch (error) {
-    console.error("❌ AI Forge Error:", error);
-    // You might want to throw or return a fallback here depending on your controller logic
-    throw new Error("AI Core Unreachable");
+    console.error("❌ AI Forge Error, serving static fallback ideas:", error);
+    // Instead of throwing (which gives a 500), gracefully degrade
+    return FALLBACK_IDEAS;
   }
 };
 
